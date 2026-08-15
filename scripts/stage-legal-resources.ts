@@ -1,10 +1,15 @@
 import { execFileSync } from 'node:child_process'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { stageLegalResources, verifyLegalResources } from './legal-resources.ts'
+import {
+  resolveLicenseInventoryCommand,
+  stageLegalResources,
+  verifyLegalResources,
+} from './legal-resources.ts'
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const inventory = execFileSync('pnpm', ['--silent', 'licenses:inventory'], {
+const inventoryCommand = resolveLicenseInventoryCommand(process.platform, process.env.ComSpec)
+const inventory = execFileSync(inventoryCommand.executable, [...inventoryCommand.args], {
   cwd: repositoryRoot,
   encoding: 'utf8',
   maxBuffer: 16 * 1024 * 1024,

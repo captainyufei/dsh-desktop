@@ -16,6 +16,29 @@ export interface DependencyInventorySummary {
   readonly packages: number
 }
 
+export interface LicenseInventoryCommand {
+  readonly executable: string
+  readonly args: readonly string[]
+}
+
+export function resolveLicenseInventoryCommand(
+  platform: NodeJS.Platform,
+  commandProcessor?: string,
+): LicenseInventoryCommand {
+  if (platform === 'win32') {
+    return {
+      executable: commandProcessor === undefined || commandProcessor === ''
+        ? 'cmd.exe'
+        : commandProcessor,
+      args: ['/d', '/s', '/c', 'pnpm.cmd --silent licenses:inventory'],
+    }
+  }
+  return {
+    executable: 'pnpm',
+    args: ['--silent', 'licenses:inventory'],
+  }
+}
+
 export interface PackageTarget {
   readonly platform: NodeJS.Platform
   readonly architecture: string

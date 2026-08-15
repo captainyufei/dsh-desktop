@@ -10,6 +10,7 @@ import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
   packagedLegalDirectory,
+  resolveLicenseInventoryCommand,
   resolvePackageTarget,
   stageLegalResources,
   verifyLegalResources,
@@ -119,6 +120,22 @@ describe('packaged legal resources', () => {
     expect(verifyLegalResources(root, packagedDirectory)).toEqual({
       licenseGroups: 1,
       packages: 1,
+    })
+  })
+})
+
+describe('dependency license inventory command', () => {
+  it('uses the Windows command processor to launch pnpm.cmd', () => {
+    expect(resolveLicenseInventoryCommand('win32', 'C:\\Windows\\System32\\cmd.exe')).toEqual({
+      executable: 'C:\\Windows\\System32\\cmd.exe',
+      args: ['/d', '/s', '/c', 'pnpm.cmd --silent licenses:inventory'],
+    })
+  })
+
+  it.each(['darwin', 'linux'] as const)('keeps direct pnpm execution on %s', (platform) => {
+    expect(resolveLicenseInventoryCommand(platform, '/unused/cmd.exe')).toEqual({
+      executable: 'pnpm',
+      args: ['--silent', 'licenses:inventory'],
     })
   })
 })
