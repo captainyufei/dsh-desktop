@@ -29,6 +29,10 @@ import {
   createRecoveryCoordinator,
   type RecoveryTicket,
 } from './recovery-coordinator.ts'
+import {
+  applyWindowAppearance,
+  windowAppearanceForPlatform,
+} from './window-appearance.ts'
 import { createDesktopLifecycle } from './window-lifecycle.ts'
 
 const MAX_HOST_LOG_CHARS = 32_768
@@ -261,6 +265,7 @@ function startApplication(): void {
       minHeight: 640,
       show: false,
       frame: true,
+      ...windowAppearanceForPlatform(process.platform),
       webPreferences: {
         contextIsolation: true,
         nodeIntegration: false,
@@ -315,13 +320,22 @@ function startApplication(): void {
     }
 
     attachLoadFailureHandler(window)
+    let appearanceReady = Promise.resolve()
+    window.webContents.on('dom-ready', () => {
+      appearanceReady = applyWindowAppearance(process.platform, window.webContents)
+        .catch((error: unknown) => {
+          diagnostics.error('Failed to apply desktop window appearance', error)
+        })
+    })
     const loaded = new Promise<BrowserWindow>((resolve) => {
       window.webContents.once('did-finish-load', () => {
-        diagnostics.log('Harness page finished loading')
-        if (mainWindow === window && !window.isDestroyed()) {
-          mainWindowReady = true
-        }
-        resolve(window)
+        void appearanceReady.then(() => {
+          diagnostics.log('Harness page finished loading')
+          if (mainWindow === window && !window.isDestroyed()) {
+            mainWindowReady = true
+          }
+          resolve(window)
+        })
       })
       // Let the lifecycle state machine observe a window destroyed while its
       // initial load was pending, so a later Host restart is not coalesced

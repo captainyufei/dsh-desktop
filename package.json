@@ -47,7 +47,8 @@
       { "from": "runtime-host/node_modules", "to": "host/node_modules" },
       { "from": "runtime-host/package.json", "to": "host/package.json" },
       { "from": "build/generated/legal", "to": "legal" },
-      { "from": "build/trayTemplate.png", "to": "desktop-resources/trayTemplate.png" }
+      { "from": "build/trayTemplate.png", "to": "desktop-resources/trayTemplate.png" },
+      { "from": "build/trayTemplate@2x.png", "to": "desktop-resources/trayTemplate@2x.png" }
     ],
     "mac": {
       "icon": "build/icon.icns",

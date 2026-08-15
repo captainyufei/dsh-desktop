@@ -182,6 +182,10 @@ describe('native package configuration', () => {
           from: 'build/trayTemplate.png',
           to: 'desktop-resources/trayTemplate.png',
         },
+        {
+          from: 'build/trayTemplate@2x.png',
+          to: 'desktop-resources/trayTemplate@2x.png',
+        },
       ],
       mac: {
         icon: 'build/icon.icns',
@@ -224,5 +228,15 @@ describe('native package configuration', () => {
     const ico = readFileSync('build/icon.ico')
     expect([...ico.subarray(0, 4)]).toEqual([0, 0, 1, 0])
     expect(ico.readUInt16LE(4)).toBeGreaterThanOrEqual(7)
+
+    const tray = readFileSync('build/trayTemplate.png')
+    expect(tray.subarray(1, 4).toString('ascii')).toBe('PNG')
+    expect(tray.readUInt32BE(16)).toBe(18)
+    expect(tray.readUInt32BE(20)).toBe(18)
+
+    const retinaTray = readFileSync('build/trayTemplate@2x.png')
+    expect(retinaTray.subarray(1, 4).toString('ascii')).toBe('PNG')
+    expect(retinaTray.readUInt32BE(16)).toBe(36)
+    expect(retinaTray.readUInt32BE(20)).toBe(36)
   })
 })
