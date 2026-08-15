@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs'
+import { existsSync, realpathSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
 
@@ -23,8 +23,12 @@ export interface HostPaths extends RuntimeArtifacts {
 }
 
 export function resolveRuntimeArtifacts(nodeModulesRoot: string): RuntimeArtifacts {
-  const dshRoot = join(nodeModulesRoot, '@deepseek-ai/dsh')
-  const dshRequire = createRequire(join(dshRoot, 'package.json'))
+  const nodeModulesRequire = createRequire(join(nodeModulesRoot, 'package.json'))
+  const dshPackage = realpathSync(
+    nodeModulesRequire.resolve('@deepseek-ai/dsh/package.json'),
+  )
+  const dshRoot = dirname(dshPackage)
+  const dshRequire = createRequire(dshPackage)
   const webAppPackage = dshRequire.resolve('@deepseek-ai/dsh-web-app/package.json')
   const webRequire = createRequire(webAppPackage)
   const webFrontendPackage = webRequire.resolve('@deepseek-ai/dsh-web-frontend/package.json')

@@ -1,4 +1,12 @@
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs'
+import { spawnSync } from 'node:child_process'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { describe, expect, it } from 'vitest'
@@ -7,6 +15,55 @@ import {
   resolveHostPaths,
   resolveRuntimeArtifacts,
 } from '../src/host/paths.ts'
+
+function createPackagedRuntimeFixture(): {
+  readonly root: string
+  readonly resourcesPath: string
+} {
+  const root = mkdtempSync(join(tmpdir(), 'dsh-desktop-packaged-'))
+  const resourcesPath = join(root, 'resources')
+  const nodeModulesRoot = join(resourcesPath, 'host', 'node_modules')
+  const pnpmRoot = join(nodeModulesRoot, '.pnpm')
+  const dshRoot = join(
+    pnpmRoot,
+    '@deepseek-ai+dsh@fixture/node_modules/@deepseek-ai/dsh',
+  )
+  const webAppRoot = join(
+    pnpmRoot,
+    '@deepseek-ai+dsh-web-app@fixture/node_modules/@deepseek-ai/dsh-web-app',
+  )
+  const webFrontendRoot = join(
+    pnpmRoot,
+    '@deepseek-ai+dsh-web-frontend@fixture/node_modules/@deepseek-ai/dsh-web-frontend',
+  )
+  const dshLink = join(nodeModulesRoot, '@deepseek-ai', 'dsh')
+  const webAppLink = join(dshRoot, 'node_modules', '@deepseek-ai', 'dsh-web-app')
+  const webFrontendLink = join(
+    webAppRoot,
+    'node_modules',
+    '@deepseek-ai',
+    'dsh-web-frontend',
+  )
+
+  mkdirSync(join(dshRoot, 'lib'), { recursive: true })
+  mkdirSync(join(dshRoot, 'node_modules', '@deepseek-ai'), { recursive: true })
+  mkdirSync(join(webAppRoot, 'node_modules', '@deepseek-ai'), { recursive: true })
+  mkdirSync(join(webFrontendRoot, 'dist'), { recursive: true })
+  mkdirSync(join(nodeModulesRoot, '@deepseek-ai'), { recursive: true })
+  writeFileSync(join(dshRoot, 'package.json'), JSON.stringify({ name: '@deepseek-ai/dsh' }))
+  writeFileSync(join(dshRoot, 'lib/bin.js'), '')
+  writeFileSync(join(webAppRoot, 'package.json'), JSON.stringify({ name: '@deepseek-ai/dsh-web-app' }))
+  writeFileSync(
+    join(webFrontendRoot, 'package.json'),
+    JSON.stringify({ name: '@deepseek-ai/dsh-web-frontend' }),
+  )
+  writeFileSync(join(webFrontendRoot, 'dist/index.html'), '')
+  symlinkSync(dshRoot, dshLink, 'dir')
+  symlinkSync(webAppRoot, webAppLink, 'dir')
+  symlinkSync(webFrontendRoot, webFrontendLink, 'dir')
+
+  return { root, resourcesPath }
+}
 
 describe('runtime artifacts', () => {
   it('resolves the CLI and official Web entry through package dependencies', () => {
@@ -19,18 +76,42 @@ describe('runtime artifacts', () => {
     expect(existsSync(result.webEntry)).toBe(true)
   })
 
-  it('uses Electron Node mode only for packaged applications', () => {
-    const packaged = resolveHostPaths({
-      isPackaged: true,
-      appPath: '/Applications/DSH Desktop.app/Contents/Resources/app.asar',
-      resourcesPath: '/Applications/DSH Desktop.app/Contents/Resources',
-      execPath: '/Applications/DSH Desktop.app/Contents/MacOS/DSH Desktop',
-      homePath: '/Users/tester',
-      env: {},
-    })
-    expect(packaged.nodeExecutable).toContain('DSH Desktop')
-    expect(packaged.electronRunAsNode).toBe(true)
-    expect(packaged.cwd).toBe('/Users/tester')
+  it('resolves runtime artifacts from a pnpm-like packaged tree', () => {
+    const fixture = createPackagedRuntimeFixture()
+    try {
+      const packaged = resolveHostPaths({
+        isPackaged: true,
+        appPath: join(fixture.resourcesPath, 'app.asar'),
+        resourcesPath: fixture.resourcesPath,
+        execPath: '/Applications/DSH Desktop.app/Contents/MacOS/DSH Desktop',
+        homePath: '/Users/tester',
+        env: {},
+      })
+      const packagedNodeModules = join(fixture.resourcesPath, 'host', 'node_modules')
+      expect(packaged.nodeExecutable).toContain('DSH Desktop')
+      expect(packaged.electronRunAsNode).toBe(true)
+      expect(packaged.cwd).toBe('/Users/tester')
+      expect(packaged.cliEntry).toContain(packagedNodeModules)
+      expect(packaged.webEntry).toContain(packagedNodeModules)
+      assertRuntimeArtifacts(packaged)
+    } finally {
+      rmSync(fixture.root, { recursive: true, force: true })
+    }
+  })
+
+  it('resolves successfully in a native Node child process', () => {
+    const script = [
+      "import { existsSync } from 'node:fs'",
+      "import { resolveRuntimeArtifacts } from './src/host/paths.ts'",
+      `const result = resolveRuntimeArtifacts(${JSON.stringify(join(process.cwd(), 'node_modules'))})`,
+      'if (!existsSync(result.cliEntry) || !existsSync(result.webEntry)) process.exit(2)',
+    ].join(';')
+    const child = spawnSync(
+      process.execPath,
+      ['--import', 'tsx', '--input-type=module', '-e', script],
+      { cwd: process.cwd(), encoding: 'utf8' },
+    )
+    expect(child.status).toBe(0)
   })
 
   it('uses the development node executable and app node_modules', () => {
