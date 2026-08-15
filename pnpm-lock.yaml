@@ -18,8 +18,8 @@ importers:
         specifier: 0.1.0-rc.6
         version: 0.1.0-rc.6(cddc836702cf47b37d5d75eedc3ebb90)
       dsh-better-sidebar:
-        specifier: github:omdsh-dev/DSH-better-sidebar#5d2d6e580143dc6ad95c015feb2909ec60afdf77
-        version: https://codeload.github.com/omdsh-dev/DSH-better-sidebar/tar.gz/5d2d6e580143dc6ad95c015feb2909ec60afdf77(patch_hash=4e18a5ff849f1dbeacd1542b514af52a3ce4f008079752e0168cd36b94fcabde)(66c4f6104258982c16d3fa363a54f80a)
+        specifier: 0.12.2
+        version: 0.12.2(patch_hash=4e18a5ff849f1dbeacd1542b514af52a3ce4f008079752e0168cd36b94fcabde)(66c4f6104258982c16d3fa363a54f80a)
     devDependencies:
       '@types/node':
         specifier: 26.2.0
@@ -3859,9 +3859,8 @@ packages:
     resolution: {integrity: sha512-uBq4egWHTcTt33a72vpSG0z3HnPuIl6NqYcTrKEg2azoEyl2hpW0zqlxysq2pK9HlDIHyHyakeYaYnSAwd8bow==}
     engines: {node: '>=12'}
 
-  dsh-better-sidebar@https://codeload.github.com/omdsh-dev/DSH-better-sidebar/tar.gz/5d2d6e580143dc6ad95c015feb2909ec60afdf77:
-    resolution: {tarball: https://codeload.github.com/omdsh-dev/DSH-better-sidebar/tar.gz/5d2d6e580143dc6ad95c015feb2909ec60afdf77}
-    version: 0.12.2
+  dsh-better-sidebar@0.12.2:
+    resolution: {integrity: sha512-b9N/Ie9d8qz/ayyf6sa+8KAqRuM3i85QLpcyu5/zWGXfB440YOVIA0r2vEFG0HVmFBO8KfLLiIgG59yo0JkK9Q==}
     engines: {node: '>=20'}
     peerDependencies:
       '@deepseek-ai/cordis': ^4.0.1
@@ -9956,7 +9955,7 @@ snapshots:
 
   dotenv@16.6.1: {}
 
-  dsh-better-sidebar@https://codeload.github.com/omdsh-dev/DSH-better-sidebar/tar.gz/5d2d6e580143dc6ad95c015feb2909ec60afdf77(patch_hash=4e18a5ff849f1dbeacd1542b514af52a3ce4f008079752e0168cd36b94fcabde)(66c4f6104258982c16d3fa363a54f80a):
+  dsh-better-sidebar@0.12.2(patch_hash=4e18a5ff849f1dbeacd1542b514af52a3ce4f008079752e0168cd36b94fcabde)(66c4f6104258982c16d3fa363a54f80a):
     dependencies:
       '@codemirror/commands': 6.10.4
       '@codemirror/lang-cpp': 6.0.3

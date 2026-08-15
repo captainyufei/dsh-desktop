@@ -247,7 +247,7 @@ describe('runtime staging safety', () => {
 })
 
 describe('native package configuration', () => {
-  it('pins the official Harness and Better Sidebar source revision', () => {
+  it('pins the official Harness and Better Sidebar versions', () => {
     const manifest = JSON.parse(readFileSync('package.json', 'utf8')) as {
       dependencies?: Record<string, string>
     }
@@ -255,8 +255,7 @@ describe('native package configuration', () => {
 
     expect(manifest.dependencies).toMatchObject({
       '@deepseek-ai/dsh': '0.1.0-rc.6',
-      'dsh-better-sidebar':
-        'github:omdsh-dev/DSH-better-sidebar#5d2d6e580143dc6ad95c015feb2909ec60afdf77',
+      'dsh-better-sidebar': '0.12.2',
     })
     expect(workspace).toMatch(/onlyBuiltDependencies:\s+- dsh-better-sidebar/u)
   })

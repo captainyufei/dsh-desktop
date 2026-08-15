@@ -40,7 +40,7 @@ SOFTWARE.
 
 ## DSH Better Sidebar
 
-DSH Desktop bundles `dsh-better-sidebar` from the pinned Git commit recorded in `package.json` and `pnpm-lock.yaml`.
+DSH Desktop bundles the exact `dsh-better-sidebar` version recorded in `package.json` and `pnpm-lock.yaml`.
 
 Upstream repository: [omdsh-dev/DSH-better-sidebar](https://github.com/omdsh-dev/DSH-better-sidebar)
 

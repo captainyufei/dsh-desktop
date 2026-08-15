@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "@deepseek-ai/dsh": "0.1.0-rc.6",
-    "dsh-better-sidebar": "github:omdsh-dev/DSH-better-sidebar#5d2d6e580143dc6ad95c015feb2909ec60afdf77"
+    "dsh-better-sidebar": "0.12.2"
   },
   "devDependencies": {
     "@types/node": "26.2.0",
