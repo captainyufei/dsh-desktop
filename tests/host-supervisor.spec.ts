@@ -51,13 +51,29 @@ class FakeChild implements HostChild {
   }
 }
 
-function createFixture(overrides: Partial<HostSupervisorOptions> = {}): {
+class SynchronousExitChild extends FakeChild {
+  override onExit(listener: ExitListener): () => void {
+    listener(1, null)
+    return () => undefined
+  }
+}
+
+class SynchronousErrorChild extends FakeChild {
+  override onError(listener: (error: Error) => void): () => void {
+    listener(new Error('synchronous spawn failure'))
+    return () => undefined
+  }
+}
+
+function createFixture(
+  overrides: Partial<HostSupervisorOptions> = {},
+  child = new FakeChild(),
+): {
   readonly child: FakeChild
   readonly spawn: ReturnType<typeof vi.fn>
   readonly unexpectedExit: ReturnType<typeof vi.fn>
   readonly options: HostSupervisorOptions
 } {
-  const child = new FakeChild()
   const spawn = vi.fn(() => child)
   const unexpectedExit = vi.fn()
   return {
@@ -159,9 +175,26 @@ describe('Harness Web host supervisor', () => {
 
   it('rejects startup failures reported by the child', async () => {
     const fixture = createFixture()
-    const pending = createHostSupervisor(fixture.options).start()
+    const supervisor = createHostSupervisor(fixture.options)
+    const pending = supervisor.start()
     fixture.child.fail(new Error('spawn failed'))
-    fixture.child.exit(1)
     await expect(pending).rejects.toThrow(/spawn failed/u)
+    await expect(supervisor.shutdown()).resolves.toBeUndefined()
+  })
+
+  it.each([
+    ['exit', new SynchronousExitChild(), /exited before readiness/u],
+    ['error', new SynchronousErrorChild(), /synchronous spawn failure/u],
+  ])('clears timers when a synchronous %s callback fires during registration', async (_, child, error) => {
+    vi.useFakeTimers()
+    try {
+      const fixture = createFixture({}, child)
+      const pending = createHostSupervisor(fixture.options).start()
+      const rejection = expect(pending).rejects.toThrow(error)
+      await rejection
+      expect(vi.getTimerCount()).toBe(0)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

@@ -67,12 +67,13 @@ class SupervisedHost implements HostSupervisor {
     try {
       const spawnHost = this.options.spawn ?? spawnDshWeb
       this.child = spawnHost(this.options)
+      this.startupTimer = setTimeout(() => this.handleStartupTimeout(), this.startupTimeoutMs)
       this.child.stdout.onData((chunk) => this.handleStdout(chunk))
       this.child.stderr.onData((chunk) => this.recordOutput(chunk))
       this.child.onExit((code, signal) => this.handleExit(code, signal))
       this.child.onError((error) => this.handleError(error))
-      this.startupTimer = setTimeout(() => this.handleStartupTimeout(), this.startupTimeoutMs)
     } catch (error) {
+      this.finishChild()
       this.failStartup(asError(error), false)
     }
 
@@ -135,13 +136,9 @@ class SupervisedHost implements HostSupervisor {
   }
 
   private handleExit(code: number | null, signal: NodeJS.Signals | null): void {
-    this.childExited = true
-    this.clearStartupTimer()
-    this.clearShutdownTimer()
-
     const wasReady = this.state === 'ready'
     const wasStarting = this.state === 'starting'
-    this.state = 'stopped'
+    this.finishChild()
     if (wasStarting) {
       this.failStartup(
         new Error(`Harness Web Host exited before readiness (${formatExit(code, signal)})`),
@@ -150,13 +147,16 @@ class SupervisedHost implements HostSupervisor {
     } else if (wasReady) {
       this.options.onUnexpectedExit?.(code, signal)
     }
-    this.resolveShutdown?.()
-    this.resolveShutdown = undefined
   }
 
   private handleError(error: Error): void {
-    if (this.state === 'starting') {
-      this.failStartup(error, true)
+    const wasReady = this.state === 'ready'
+    const wasStarting = this.state === 'starting'
+    this.finishChild()
+    if (wasStarting) {
+      this.failStartup(error, false)
+    } else if (wasReady) {
+      this.options.onUnexpectedExit?.(null, null)
     }
   }
 
@@ -205,6 +205,15 @@ class SupervisedHost implements HostSupervisor {
     return this.startupOutput === ''
       ? error
       : new Error(`${error.message}${this.outputSuffix()}`, { cause: error })
+  }
+
+  private finishChild(): void {
+    this.childExited = true
+    this.state = 'stopped'
+    this.clearStartupTimer()
+    this.clearShutdownTimer()
+    this.resolveShutdown?.()
+    this.resolveShutdown = undefined
   }
 
   private clearStartupTimer(): void {

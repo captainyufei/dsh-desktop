@@ -4,9 +4,11 @@ export interface ReadinessParser {
 }
 
 const READINESS_PREFIX = 'dsh web: '
+const MAX_PENDING_LINE_CHARS = 32_768
 
 class IncrementalReadinessParser implements ReadinessParser {
   private pending = ''
+  private discardingLongLine = false
   private origin: string | undefined
 
   push(chunk: string): string | undefined {
@@ -14,20 +16,55 @@ class IncrementalReadinessParser implements ReadinessParser {
       return this.origin
     }
 
-    this.pending += chunk
-    let newlineIndex = this.pending.indexOf('\n')
-    while (newlineIndex !== -1) {
-      const line = this.pending.slice(0, newlineIndex).replace(/\r$/u, '')
-      this.pending = this.pending.slice(newlineIndex + 1)
+    let remaining = chunk
+    while (remaining !== '') {
+      if (this.discardingLongLine) {
+        const newlineIndex = remaining.indexOf('\n')
+        if (newlineIndex === -1) {
+          return undefined
+        }
+        remaining = remaining.slice(newlineIndex + 1)
+        this.discardingLongLine = false
+        continue
+      }
+
+      const newlineIndex = remaining.indexOf('\n')
+      if (newlineIndex === -1) {
+        this.appendPending(remaining)
+        return undefined
+      }
+
+      if (this.pending.length + newlineIndex > MAX_PENDING_LINE_CHARS) {
+        this.pending = ''
+        remaining = remaining.slice(newlineIndex + 1)
+        continue
+      }
+
+      const line = `${this.pending}${remaining.slice(0, newlineIndex)}`.replace(/\r$/u, '')
+      this.pending = ''
+      remaining = remaining.slice(newlineIndex + 1)
+      if (line.length > MAX_PENDING_LINE_CHARS) {
+        continue
+      }
       const origin = parseReadinessLine(line)
       if (origin !== undefined) {
         this.origin = origin
+        this.pending = ''
+        this.discardingLongLine = false
         return origin
       }
-      newlineIndex = this.pending.indexOf('\n')
     }
 
     return undefined
+  }
+
+  private appendPending(fragment: string): void {
+    if (this.pending.length + fragment.length > MAX_PENDING_LINE_CHARS) {
+      this.pending = ''
+      this.discardingLongLine = true
+      return
+    }
+    this.pending += fragment
   }
 
   finalize(): string {

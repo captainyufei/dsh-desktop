@@ -55,6 +55,22 @@ describe('Harness Web readiness parser', () => {
     expect(parser.push('\n')).toBe('http://localhost:3210')
   })
 
+  it('bounds an unterminated line and resumes parsing after its newline', () => {
+    const parser = createReadinessParser()
+    parser.push('x'.repeat(32_769))
+    expect((parser as unknown as { pending: string }).pending).toHaveLength(0)
+    expect(parser.push('\ndsh web: http://127.0.0.1:3080\n')).toBe('http://127.0.0.1:3080')
+  })
+
+  it('discards the unread suffix once readiness has been accepted', () => {
+    const parser = createReadinessParser()
+    expect(parser.push(`dsh web: http://127.0.0.1:3080\n${'x'.repeat(32_769)}`)).toBe(
+      'http://127.0.0.1:3080',
+    )
+    expect((parser as unknown as { pending: string }).pending).toBe('')
+    expect(parser.finalize()).toBe('http://127.0.0.1:3080')
+  })
+
   it('reports EOF before readiness', () => {
     expect(() => createReadinessParser().finalize()).toThrow(/before readiness/u)
   })
