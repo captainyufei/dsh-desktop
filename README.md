@@ -4,6 +4,8 @@
 
 <h1 align="center">DSH Desktop</h1>
 
+<p align="center">中文 · <a href="./README.en.md">English</a></p>
+
 <p align="center">
   把 DeepSeek Harness 带到 macOS 与 Windows 桌面。<br>
   内置本地运行时、原生窗口与托盘，以及文件、终端、预览和 Git 工作台。
@@ -127,16 +129,6 @@ pnpm dev
 | `pnpm dist:mac:x64` | 在 macOS x64 上生成 DMG |
 | `pnpm dist:win:x64` | 在 Windows x64 上生成 NSIS 安装程序 |
 
-## 官网开发
-
-无依赖静态官网位于 [`website/`](./website)。在仓库根目录运行：
-
-```sh
-pnpm site:dev
-```
-
-然后访问 `http://127.0.0.1:4173`。仓库地址、版本号和下载链接在 [`website/site.config.js`](./website/site.config.js) 中配置；下载链接留空时，页面会显示“发布准备中”，不会跳转到无效文件。
-
 ## 故障排查
 
 <details>
@@ -163,6 +155,43 @@ pnpm site:dev
 ## 当前边界
 
 `0.1.x` 版本不包含自动更新、云同步、手机远程、插件市场或 Linux 构建。它是围绕官方 Web UI 的本地桌面壳，并提供固定版本的社区工作区侧边栏增强。
+
+## 社区交流
+
+可选择常用的平台参与讨论，交流使用问题、插件开发和项目进展。
+
+<table>
+  <thead>
+    <tr>
+      <th align="center">微信群</th>
+      <th align="center">QQ 群</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="center"><img src="./assets/readme/community-wechat.png" width="220" alt="DSH Desktop 微信群二维码"></td>
+      <td align="center">二维码待补充</td>
+    </tr>
+  </tbody>
+</table>
+
+Discord：[加入 DeepSeek Harness Desktop 社区](https://discord.gg/TJeGqKRNM)
+
+如果你希望加入我们的技术团队，也欢迎通过 [captainaigc@gmail.com](mailto:captainaigc@gmail.com) 联系我们。
+
+## 友情链接
+
+这里收录 DeepSeek Harness 生态项目及开发者工具。
+
+| 项目 | 简介 | 链接 |
+| --- | --- | --- |
+| DeepSeek Harness 橙皮书 | DeepSeek Harness 社区实测手册。 | [GitHub](https://github.com/alchaincyf/deepseek-harness-orange-book) |
+| Awesome DSH Plugin | DeepSeek Harness 社区插件精选列表。 | [GitHub](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin) · [官网](https://awesome-dsh-plugin.com/) |
+| dsh-web-ui | DeepSeek Harness Web UI 插件与皮肤合集。 | [GitHub](https://github.com/zhu1090093659/dsh-web-ui) · [展示站](https://gallery.dsh-market.com/) |
+| dsh-TUI | DeepSeek Harness 全屏交互式终端界面。 | [GitHub](https://github.com/ccch1mneyyy/dsh-TUI) |
+| Agents-Anywhere | 从手机远程控制电脑上的 Coding Agent。 | [GitHub](https://github.com/anywhere-labs/Agents-Anywhere) |
+| DSH-better-sidebar | DeepSeek Harness 侧边栏工作台，集成文件、终端、Git 和子代理。 | [GitHub](https://github.com/omdsh-dev/DSH-better-sidebar) |
+| Awesome DeepSeek Harness | DeepSeek Harness 插件、工具与基础设施精选列表。 | [GitHub](https://github.com/0xsline/awesome-deepseek-harness) · [官网](https://deepseekdocs.com/) |
 
 ## 上游与许可证
 
