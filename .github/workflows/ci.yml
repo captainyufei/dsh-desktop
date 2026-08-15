@@ -17,6 +17,17 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check committed whitespace
+        env:
+          EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [ -n "$EVENT_BASE_SHA" ] && git cat-file -e "${EVENT_BASE_SHA}^{commit}" 2>/dev/null; then
+            git diff --check "$EVENT_BASE_SHA" "$GITHUB_SHA"
+          else
+            git show --check --format= "$GITHUB_SHA"
+          fi
       - uses: pnpm/action-setup@v4
         with:
           version: 10.29.2
@@ -51,17 +62,18 @@ jobs:
       - run: pnpm dist:mac:arm64
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-      - name: Create checksum and dependency license inventory
+      - name: Create checksum
         run: |
           (cd dist && shasum -a 256 *.dmg > SHA256SUMS.txt)
-          pnpm --silent licenses:inventory > dist/dependency-licenses.json
       - uses: actions/upload-artifact@v4
         with:
           name: dsh-desktop-mac-arm64
           path: |
             dist/*.dmg
             dist/SHA256SUMS.txt
-            dist/dependency-licenses.json
+            build/generated/legal/LICENSE
+            build/generated/legal/THIRD_PARTY_NOTICES.md
+            build/generated/legal/dependency-licenses.json
           if-no-files-found: error
 
   mac-x64:
@@ -85,17 +97,18 @@ jobs:
       - run: pnpm dist:mac:x64
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-      - name: Create checksum and dependency license inventory
+      - name: Create checksum
         run: |
           (cd dist && shasum -a 256 *.dmg > SHA256SUMS.txt)
-          pnpm --silent licenses:inventory > dist/dependency-licenses.json
       - uses: actions/upload-artifact@v4
         with:
           name: dsh-desktop-mac-x64
           path: |
             dist/*.dmg
             dist/SHA256SUMS.txt
-            dist/dependency-licenses.json
+            build/generated/legal/LICENSE
+            build/generated/legal/THIRD_PARTY_NOTICES.md
+            build/generated/legal/dependency-licenses.json
           if-no-files-found: error
 
   windows-x64:
@@ -117,19 +130,20 @@ jobs:
       - run: pnpm build
       - run: pnpm test:smoke
       - run: pnpm dist:win:x64
-      - name: Create checksum and dependency license inventory
+      - name: Create checksum
         shell: pwsh
         run: |
           Get-ChildItem dist -Filter *.exe |
             Sort-Object Name |
             ForEach-Object { "$(Get-FileHash $_.FullName -Algorithm SHA256 | Select-Object -ExpandProperty Hash)  $($_.Name)" } |
             Set-Content -Encoding utf8 dist/SHA256SUMS.txt
-          pnpm --silent licenses:inventory | Out-File -Encoding utf8 dist/dependency-licenses.json
       - uses: actions/upload-artifact@v4
         with:
           name: dsh-desktop-windows-x64
           path: |
             dist/*.exe
             dist/SHA256SUMS.txt
-            dist/dependency-licenses.json
+            build/generated/legal/LICENSE
+            build/generated/legal/THIRD_PARTY_NOTICES.md
+            build/generated/legal/dependency-licenses.json
           if-no-files-found: error

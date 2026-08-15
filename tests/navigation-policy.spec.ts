@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { classifyNavigation } from '../src/navigation-policy.ts'
+import {
+  classifyNavigation,
+  registerMainFrameNavigationHandlers,
+  type MainFrameNavigationListener,
+} from '../src/navigation-policy.ts'
 
 describe('navigation policy', () => {
   it.each([
@@ -29,4 +33,86 @@ describe('navigation policy', () => {
       expect(classifyNavigation(raw, 'http://127.0.0.1:3080')).toBe('deny')
     },
   )
+
+  it('prevents an external redirect from replacing the Harness page and opens it externally', () => {
+    let navigate: MainFrameNavigationListener | undefined
+    let redirect: MainFrameNavigationListener | undefined
+    const externalUrls: string[] = []
+    registerMainFrameNavigationHandlers({
+      onWillNavigate(listener) {
+        navigate = listener
+      },
+      onWillRedirect(listener) {
+        redirect = listener
+      },
+    }, {
+      getHostOrigin: () => 'http://127.0.0.1:3080',
+      openExternal: (url) => externalUrls.push(url),
+    })
+
+    expect(redirect).toBe(navigate)
+    const event = {
+      isMainFrame: true,
+      prevented: false,
+      preventDefault() {
+        this.prevented = true
+      },
+    }
+    redirect?.(event, 'https://example.com/after-302')
+
+    expect(event.prevented).toBe(true)
+    expect(externalUrls).toEqual(['https://example.com/after-302'])
+  })
+
+  it('denies a non-HTTP redirect without handing it to the operating system', () => {
+    let redirect: MainFrameNavigationListener | undefined
+    const externalUrls: string[] = []
+    registerMainFrameNavigationHandlers({
+      onWillNavigate() {},
+      onWillRedirect(listener) {
+        redirect = listener
+      },
+    }, {
+      getHostOrigin: () => 'http://127.0.0.1:3080',
+      openExternal: (url) => externalUrls.push(url),
+    })
+
+    const event = {
+      isMainFrame: true,
+      prevented: false,
+      preventDefault() {
+        this.prevented = true
+      },
+    }
+    redirect?.(event, 'file:///tmp/redirected')
+
+    expect(event.prevented).toBe(true)
+    expect(externalUrls).toEqual([])
+  })
+
+  it('ignores redirects in subframes', () => {
+    let redirect: MainFrameNavigationListener | undefined
+    const externalUrls: string[] = []
+    registerMainFrameNavigationHandlers({
+      onWillNavigate() {},
+      onWillRedirect(listener) {
+        redirect = listener
+      },
+    }, {
+      getHostOrigin: () => 'http://127.0.0.1:3080',
+      openExternal: (url) => externalUrls.push(url),
+    })
+
+    const event = {
+      isMainFrame: false,
+      prevented: false,
+      preventDefault() {
+        this.prevented = true
+      },
+    }
+    redirect?.(event, 'https://example.com/subframe-redirect')
+
+    expect(event.prevented).toBe(false)
+    expect(externalUrls).toEqual([])
+  })
 })

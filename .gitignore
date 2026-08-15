@@ -2,6 +2,7 @@ node_modules/
 lib/
 dist/
 runtime-host/
+build/generated/
 coverage/
 .worktrees/
 .superpowers/

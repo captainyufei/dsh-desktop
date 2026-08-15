@@ -32,4 +32,4 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-Release artifacts also include a generated `dependency-licenses.json` inventory produced by `pnpm licenses:inventory`. That release-time inventory covers the pinned production dependency graph; transitive notices are generated rather than manually curated in this file.
+Installed applications and accompanying release artifacts also include a generated `dependency-licenses.json` inventory produced by `pnpm licenses:inventory`. That artifact-specific inventory covers the pinned production dependency graph; transitive notices are generated rather than manually curated in this file.

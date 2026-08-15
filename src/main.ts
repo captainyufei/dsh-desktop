@@ -16,11 +16,15 @@ import { createDiagnostics } from './diagnostics.ts'
 import { assertRuntimeArtifacts, resolveHostPaths, type HostPaths } from './host/paths.ts'
 import {
   createHostSupervisor,
+  formatStartupErrorForDialog,
   spawnDshWeb,
   type HostChild,
   type HostSupervisor,
 } from './host/supervisor.ts'
-import { classifyNavigation } from './navigation-policy.ts'
+import {
+  classifyNavigation,
+  registerMainFrameNavigationHandlers,
+} from './navigation-policy.ts'
 import {
   createRecoveryCoordinator,
   type RecoveryTicket,
@@ -152,7 +156,7 @@ function startApplication(): void {
         type: 'error',
         title: APP_NAME,
         message: 'Harness could not start.',
-        detail: error instanceof Error ? error.message : String(error),
+        detail: formatStartupErrorForDialog(error),
         buttons: ['Retry', 'Open Logs', 'Quit'],
         defaultId: 0,
         cancelId: 2,
@@ -275,21 +279,20 @@ function startApplication(): void {
       }
     })
 
-    window.webContents.on('will-navigate', (event, url) => {
-      if (hostOrigin === undefined) {
-        event.preventDefault()
-        return
-      }
-      const decision = classifyNavigation(url, hostOrigin)
-      if (decision === 'allow') {
-        return
-      }
-      event.preventDefault()
-      if (decision === 'external') {
+    registerMainFrameNavigationHandlers({
+      onWillNavigate(listener) {
+        window.webContents.on('will-navigate', listener)
+      },
+      onWillRedirect(listener) {
+        window.webContents.on('will-redirect', listener)
+      },
+    }, {
+      getHostOrigin: () => hostOrigin,
+      openExternal(url) {
         void shell.openExternal(url).catch((error: unknown) => {
           diagnostics.error('Failed to open external link', error)
         })
-      }
+      },
     })
     window.webContents.setWindowOpenHandler(({ url }) => {
       if (hostOrigin !== undefined && classifyNavigation(url, hostOrigin) === 'external') {
@@ -479,7 +482,7 @@ function startApplication(): void {
       type: 'error',
       title: APP_NAME,
       message: 'Required Harness runtime artifacts are missing.',
-      detail: error instanceof Error ? error.message : String(error),
+      detail: formatStartupErrorForDialog(error),
       buttons: ['Open Logs', 'Quit'],
       defaultId: 0,
       cancelId: 1,

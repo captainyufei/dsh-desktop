@@ -4,6 +4,24 @@ import { createReadinessParser } from './readiness.ts'
 const STARTUP_TIMEOUT_MS = 90_000
 const SHUTDOWN_TIMEOUT_MS = 5_000
 const MAX_STARTUP_OUTPUT_CHARS = 32_768
+const MAX_STARTUP_DIALOG_DETAIL_CHARS = 2_000
+const DIALOG_TRUNCATION_NOTICE = '\n\n… [truncated; full details are available in logs] …\n\n'
+
+export function formatStartupErrorForDialog(error: unknown): string {
+  const detail = error instanceof Error ? error.message : String(error)
+  if (detail.length <= MAX_STARTUP_DIALOG_DETAIL_CHARS) {
+    return detail
+  }
+
+  const available = MAX_STARTUP_DIALOG_DETAIL_CHARS - DIALOG_TRUNCATION_NOTICE.length
+  const prefixLength = Math.min(512, Math.ceil(available / 3))
+  const suffixLength = available - prefixLength
+  return [
+    detail.slice(0, prefixLength).trimEnd(),
+    DIALOG_TRUNCATION_NOTICE,
+    detail.slice(-suffixLength).trimStart(),
+  ].join('')
+}
 
 export interface HostChild {
   readonly stdout: { onData(listener: (chunk: string) => void): () => void }

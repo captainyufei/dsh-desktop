@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   createHostSupervisor,
+  formatStartupErrorForDialog,
   type HostChild,
   type HostSupervisorOptions,
 } from '../src/host/supervisor.ts'
@@ -232,5 +233,25 @@ describe('Harness Web host supervisor', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+})
+
+describe('startup recovery dialog detail', () => {
+  it('keeps a short startup error readable without changing it', () => {
+    expect(formatStartupErrorForDialog(new Error('Harness failed to bind its port'))).toBe(
+      'Harness failed to bind its port',
+    )
+  })
+
+  it('caps long Host output while preserving the cause and most recent diagnostics', () => {
+    const error = new Error(
+      `Harness Web Host exited before readiness (code 1)\nStartup output:\n${'old output\n'.repeat(4_000)}LATEST HOST LINE`,
+    )
+    const detail = formatStartupErrorForDialog(error)
+
+    expect(detail.length).toBeLessThanOrEqual(2_000)
+    expect(detail).toMatch(/^Harness Web Host exited before readiness/u)
+    expect(detail).toContain('truncated; full details are available in logs')
+    expect(detail).toMatch(/LATEST HOST LINE$/u)
   })
 })

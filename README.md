@@ -80,7 +80,7 @@ pnpm dist:mac:x64    # macOS x64 runner only
 pnpm dist:win:x64    # Windows x64 runner only
 ```
 
-Run the real pinned Harness smoke test explicitly with `pnpm test:smoke`. Normal `pnpm test` runs the smoke file in skipped mode so unit tests stay isolated. Release CI generates `dependency-licenses.json` with `pnpm licenses:inventory`; do not replace that generated full inventory with hand-written transitive dependency notices.
+Run the real pinned Harness smoke test explicitly with `pnpm test:smoke`. Normal `pnpm test` runs the smoke file in skipped mode so unit tests stay isolated. Packaging generates `dependency-licenses.json` with `pnpm licenses:inventory`, bundles it with `LICENSE` and `THIRD_PARTY_NOTICES.md` under the application's `legal` resources directory, and uploads the same three files with release installers. Do not replace that generated full inventory with hand-written transitive dependency notices.
 
 ## Troubleshooting
 
