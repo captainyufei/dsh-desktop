@@ -9,8 +9,21 @@ const script = readFileSync('website/site.js', 'utf8')
 const i18n = readFileSync('website/site-i18n.js', 'utf8')
 const deepseekLogo = readFileSync('build/deepseek-logo.svg', 'utf8')
 const favicon = readFileSync('website/build/favicon-spectrum-v3.svg', 'utf8')
+const rootRedirect = readFileSync('index.html', 'utf8')
+const vercelConfig = JSON.parse(readFileSync('website/vercel.json', 'utf8'))
 
 describe('landing page', () => {
+  it('ships as a standalone static Vercel project while retaining the repository-root preview entry', () => {
+    expect(vercelConfig).toMatchObject({
+      framework: null,
+      outputDirectory: '.',
+      cleanUrls: true,
+      trailingSlash: false,
+    })
+    expect(rootRedirect).toContain('window.location.replace(\'./website/\'')
+    expect(rootRedirect).toContain('window.location.search + window.location.hash')
+  })
+
   it('keeps the Chinese landing page focused on the product, downloads, and disclaimer', () => {
     expect(html).toContain('<html lang="zh-CN">')
     expect(html).toContain('DeepSeek Harness')
