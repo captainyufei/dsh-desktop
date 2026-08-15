@@ -37,8 +37,13 @@ describe('desktop window appearance', () => {
     expect(MACOS_TITLEBAR_CSS).toContain('var(--dsw-alias-bg-base, #fff)')
     expect(MACOS_TITLEBAR_CSS).toContain('-webkit-app-region: drag')
     expect(MACOS_TITLEBAR_CSS).toContain('padding-top: var(--dsh-desktop-titlebar-height)')
+    expect(MACOS_TITLEBAR_CSS).toContain('titlebar-sidebar-width')
+    expect(MACOS_TITLEBAR_CSS).toContain('border-right: 1px solid')
     expect(MACOS_TITLEBAR_SCRIPT).toContain(MACOS_TITLEBAR_ELEMENT_ID)
     expect(MACOS_TITLEBAR_SCRIPT).toContain('document.getElementById(id)')
+    expect(MACOS_TITLEBAR_SCRIPT).toContain('document.elementsFromPoint(1, sampleY)')
+    expect(MACOS_TITLEBAR_SCRIPT).toContain('new ResizeObserver')
+    expect(MACOS_TITLEBAR_SCRIPT).toContain('new MutationObserver')
   })
 
   it('does not alter Web contents on other platforms', async () => {
