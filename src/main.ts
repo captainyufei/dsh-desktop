@@ -289,8 +289,19 @@ function startApplication(): void {
       // Keep Windows chrome native. Explicitly showing the menu avoids an
       // Electron/Windows race where a restored window can retain the hidden
       // menu-bar state from a previous launch even with autoHideMenuBar=false.
-      window.setAutoHideMenuBar(false)
-      window.setMenuBarVisibility(true)
+      const restoreMenuBar = (): void => {
+        if (window.isDestroyed()) {
+          return
+        }
+        window.setAutoHideMenuBar(false)
+        window.setMenuBarVisibility(true)
+      }
+      restoreMenuBar()
+      // Restoring a hidden BrowserWindow can re-apply Windows' persisted
+      // menu-bar state after construction. Reassert the native chrome at the
+      // two points where the window becomes presentable/visible.
+      window.on('ready-to-show', restoreMenuBar)
+      window.on('show', restoreMenuBar)
     }
 
     window.on('close', (event) => lifecycle.onWindowClose(event))
