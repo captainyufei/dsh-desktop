@@ -111,6 +111,58 @@ describe('desktop lifecycle', () => {
     await Promise.all([first, second])
   })
 
+  it('coalesces a re-entrant window creation request', async () => {
+    let lifecycle!: ReturnType<typeof createDesktopLifecycle>
+    let reentrant: Promise<void> | undefined
+    const window = new FakeWindow()
+    const createWindow = vi.fn(() => {
+      reentrant = lifecycle.showWindow()
+      return window
+    })
+    lifecycle = createDesktopLifecycle({
+      getWindow: () => undefined,
+      createWindow,
+      disposeHost: () => Promise.resolve(),
+      quit: vi.fn(),
+      reportError: vi.fn(),
+    })
+
+    const first = lifecycle.showWindow()
+
+    expect(reentrant).toBe(first)
+    expect(createWindow).toHaveBeenCalledOnce()
+    await first
+  })
+
+  it('recreates when a window is destroyed during restoration', async () => {
+    const fixture = createFixture()
+    const original = fixture.window!
+    original.visible = false
+    original.show.mockImplementation(() => {
+      original.visible = true
+      original.destroyed = true
+    })
+    const replacement = new FakeWindow()
+    fixture.createWindow.mockImplementation(() => Promise.resolve(replacement))
+    let current: FakeWindow | undefined = original
+    const lifecycle = createDesktopLifecycle({
+      getWindow: () => current,
+      createWindow: async () => {
+        current = await fixture.createWindow()
+        return current
+      },
+      disposeHost: fixture.disposeHost,
+      quit: fixture.quit,
+      reportError: fixture.reportError,
+    })
+
+    await lifecycle.showWindow()
+
+    expect(fixture.createWindow).toHaveBeenCalledOnce()
+    expect(replacement.show).toHaveBeenCalledOnce()
+    expect(replacement.focus).toHaveBeenCalledOnce()
+  })
+
   it('coalesces concurrent quit and disposes Host before Electron quit', async () => {
     const fixture = createFixture()
     let releaseDispose: (() => void) | undefined
@@ -132,6 +184,28 @@ describe('desktop lifecycle', () => {
     releaseDispose?.()
     await Promise.all([first, second])
     expect(fixture.quit).toHaveBeenCalledOnce()
+  })
+
+  it('coalesces a re-entrant quit request from Host disposal', async () => {
+    let lifecycle!: ReturnType<typeof createDesktopLifecycle>
+    let reentrant: Promise<void> | undefined
+    const disposeHost = vi.fn(() => {
+      reentrant = lifecycle.requestQuit()
+      return Promise.resolve()
+    })
+    lifecycle = createDesktopLifecycle({
+      getWindow: () => undefined,
+      createWindow: () => new FakeWindow(),
+      disposeHost,
+      quit: vi.fn(),
+      reportError: vi.fn(),
+    })
+
+    const first = lifecycle.requestQuit()
+
+    expect(reentrant).toBe(first)
+    expect(disposeHost).toHaveBeenCalledOnce()
+    await first
   })
 
   it('suppresses close handling and restore while quitting', async () => {
@@ -156,6 +230,17 @@ describe('desktop lifecycle', () => {
 
     releaseDispose?.()
     await quitting
+  })
+
+  it('does not hide a window that is already destroyed', () => {
+    const fixture = createFixture()
+    fixture.window!.destroyed = true
+    const event = { preventDefault: vi.fn() }
+
+    fixture.lifecycle.onWindowClose(event)
+
+    expect(event.preventDefault).toHaveBeenCalledOnce()
+    expect(fixture.window?.hide).not.toHaveBeenCalled()
   })
 
   it('reports disposal errors and still completes Electron quit', async () => {

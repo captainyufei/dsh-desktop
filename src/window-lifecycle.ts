@@ -32,14 +32,25 @@ export function createDesktopLifecycle(options: DesktopLifecycleOptions): Deskto
   let creatingWindow: Promise<void> | undefined
   let pendingQuit: Promise<void> | undefined
 
-  const restore = (window: DesktopWindow, forceShow = false): void => {
+  const restore = (window: DesktopWindow, forceShow = false): boolean => {
     if (window.isDestroyed() || quitting) {
-      return
+      return false
     }
-    if (forceShow || !window.isVisible()) {
-      window.show()
+    try {
+      if (forceShow || !window.isVisible()) {
+        window.show()
+      }
+      if (window.isDestroyed() || quitting) {
+        return false
+      }
+      window.focus()
+      return !window.isDestroyed()
+    } catch (error) {
+      if (window.isDestroyed()) {
+        return false
+      }
+      throw error
     }
-    window.focus()
   }
 
   const showWindow = (): Promise<void> => {
@@ -49,35 +60,64 @@ export function createDesktopLifecycle(options: DesktopLifecycleOptions): Deskto
 
     const current = options.getWindow()
     if (current !== undefined && !current.isDestroyed()) {
-      restore(current)
-      return Promise.resolve()
+      try {
+        if (restore(current)) {
+          return Promise.resolve()
+        }
+      } catch (error) {
+        options.reportError(error)
+        return Promise.resolve()
+      }
     }
 
     if (creatingWindow !== undefined) {
       return creatingWindow
     }
 
-    let created: DesktopWindow | Promise<DesktopWindow>
-    try {
-      created = options.createWindow()
-    } catch (error) {
-      options.reportError(error)
-      return Promise.resolve()
+    let resolveOperation!: () => void
+    const operation = new Promise<void>((resolve) => {
+      resolveOperation = resolve
+    })
+    creatingWindow = operation
+
+    const createAndRestore = (): void => {
+      let created: DesktopWindow | Promise<DesktopWindow>
+      try {
+        created = options.createWindow()
+      } catch (error) {
+        options.reportError(error)
+        resolveOperation()
+        return
+      }
+
+      Promise.resolve(created).then(
+        (window) => {
+          try {
+            if (restore(window, true)) {
+              resolveOperation()
+            } else if (!quitting) {
+              createAndRestore()
+            } else {
+              resolveOperation()
+            }
+          } catch (error) {
+            options.reportError(error)
+            resolveOperation()
+          }
+        },
+        (error: unknown) => {
+          options.reportError(error)
+          resolveOperation()
+        },
+      )
     }
 
-    const operation = Promise.resolve(created)
-      .then((window) => {
-        restore(window, true)
-      })
-      .catch((error: unknown) => {
-        options.reportError(error)
-      })
-      .finally(() => {
-        if (creatingWindow === operation) {
-          creatingWindow = undefined
-        }
-      })
-    creatingWindow = operation
+    operation.then(() => {
+      if (creatingWindow === operation) {
+        creatingWindow = undefined
+      }
+    })
+    createAndRestore()
     return operation
   }
 
@@ -87,8 +127,17 @@ export function createDesktopLifecycle(options: DesktopLifecycleOptions): Deskto
     }
     event.preventDefault()
     const window = options.getWindow()
-    if (window !== undefined && !window.isDestroyed()) {
-      window.hide()
+    if (window === undefined || window.isDestroyed()) {
+      return
+    }
+    try {
+      if (!window.isDestroyed()) {
+        window.hide()
+      }
+    } catch (error) {
+      if (!window.isDestroyed()) {
+        options.reportError(error)
+      }
     }
   }
 
@@ -98,22 +147,39 @@ export function createDesktopLifecycle(options: DesktopLifecycleOptions): Deskto
     }
 
     quitting = true
+    let resolveOperation!: () => void
+    const operation = new Promise<void>((resolve) => {
+      resolveOperation = resolve
+    })
+    pendingQuit = operation
+
+    const finishQuit = (): void => {
+      try {
+        options.quit()
+      } catch (error) {
+        options.reportError(error)
+      }
+      resolveOperation()
+    }
+
     let disposal: Promise<void>
     try {
       disposal = Promise.resolve(options.disposeHost())
     } catch (error) {
       options.reportError(error)
-      disposal = Promise.resolve()
+      finishQuit()
+      return operation
     }
 
-    const operation = disposal
-      .catch((error: unknown) => {
+    disposal.then(
+      () => {
+        finishQuit()
+      },
+      (error: unknown) => {
         options.reportError(error)
-      })
-      .then(() => {
-        options.quit()
-      })
-    pendingQuit = operation
+        finishQuit()
+      },
+    )
     return operation
   }
 
