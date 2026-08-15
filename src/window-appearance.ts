@@ -22,18 +22,6 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-body::after {
-  content: '';
-  position: fixed;
-  top: calc(var(--dsh-desktop-titlebar-height) - 1px);
-  right: 0;
-  left: 0;
-  z-index: 2147483647;
-  height: 1px;
-  pointer-events: none;
-  background: var(--dsw-alias-border-l2, rgba(127, 127, 127, 0.18));
-}
-
 #root {
   height: 100% !important;
 }
