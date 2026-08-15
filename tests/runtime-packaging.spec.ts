@@ -170,7 +170,7 @@ describe('native package configuration', () => {
     expect(manifest.build).toMatchObject({
       appId: 'com.community.dsh-desktop',
       productName: 'DSH Desktop',
-      icon: 'build/icon.svg',
+      icon: 'build/icon.png',
       beforeBuild: './scripts/electron-builder-hooks.cjs',
       asar: true,
       files: ['lib/**', 'package.json'],
@@ -184,10 +184,11 @@ describe('native package configuration', () => {
         },
       ],
       mac: {
+        icon: 'build/icon.icns',
         category: 'public.app-category.developer-tools',
         target: ['dmg'],
       },
-      win: { target: ['nsis'] },
+      win: { icon: 'build/icon.ico', target: ['nsis'] },
       nsis: {
         oneClick: false,
         allowToChangeInstallationDirectory: true,
@@ -207,9 +208,17 @@ describe('native package configuration', () => {
     })
   })
 
-  it('provides an original scalable application icon', () => {
-    const icon = readFileSync('build/icon.svg', 'utf8')
-    expect(icon).toContain('viewBox="0 0 1024 1024"')
-    expect(icon).toContain('<svg')
+  it('provides original production icons for macOS and Windows', () => {
+    const png = readFileSync('build/icon.png')
+    expect(png.subarray(1, 4).toString('ascii')).toBe('PNG')
+    expect(png.readUInt32BE(16)).toBe(1024)
+    expect(png.readUInt32BE(20)).toBe(1024)
+
+    const icns = readFileSync('build/icon.icns')
+    expect(icns.subarray(0, 4).toString('ascii')).toBe('icns')
+
+    const ico = readFileSync('build/icon.ico')
+    expect([...ico.subarray(0, 4)]).toEqual([0, 0, 1, 0])
+    expect(ico.readUInt16LE(4)).toBeGreaterThanOrEqual(7)
   })
 })

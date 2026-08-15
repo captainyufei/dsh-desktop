@@ -39,7 +39,7 @@
   "build": {
     "appId": "com.community.dsh-desktop",
     "productName": "DSH Desktop",
-    "icon": "build/icon.svg",
+    "icon": "build/icon.png",
     "beforeBuild": "./scripts/electron-builder-hooks.cjs",
     "asar": true,
     "files": ["lib/**", "package.json"],
@@ -50,10 +50,12 @@
       { "from": "build/trayTemplate.png", "to": "desktop-resources/trayTemplate.png" }
     ],
     "mac": {
+      "icon": "build/icon.icns",
       "category": "public.app-category.developer-tools",
       "target": ["dmg"]
     },
     "win": {
+      "icon": "build/icon.ico",
       "target": ["nsis"]
     },
     "nsis": {
