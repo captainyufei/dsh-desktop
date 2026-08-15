@@ -5,6 +5,7 @@ injectWorkspacePackages: true
 
 onlyBuiltDependencies:
   - dsh-better-sidebar
+  - node-pty
 
 patchedDependencies:
   dsh-better-sidebar@0.12.2: patches/dsh-better-sidebar@0.12.2.patch

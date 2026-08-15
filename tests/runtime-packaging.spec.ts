@@ -258,6 +258,7 @@ describe('native package configuration', () => {
       'dsh-better-sidebar': '0.12.2',
     })
     expect(workspace).toMatch(/onlyBuiltDependencies:\s+- dsh-better-sidebar/u)
+    expect(workspace).toMatch(/onlyBuiltDependencies:[\s\S]*- node-pty/u)
   })
 
   it('keeps Better Sidebar controls usable before the first session exists', () => {
