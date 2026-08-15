@@ -1,5 +1,5 @@
 import { lstatSync, readdirSync, realpathSync, statSync } from 'node:fs'
-import { basename, join, resolve } from 'node:path'
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 export interface RuntimeEntries {
@@ -7,7 +7,56 @@ export interface RuntimeEntries {
   webEntry: string
 }
 
-function isFile(path: string): boolean {
+function canonicalPath(path: string): string | undefined {
+  try {
+    return realpathSync(path)
+  } catch {
+    return undefined
+  }
+}
+
+function isWithinBoundary(boundary: string, path: string): boolean {
+  const relativePath = relative(boundary, path)
+  return (
+    relativePath === '' ||
+    (relativePath !== '..' && !relativePath.startsWith(`..${sep}`) && !isAbsolute(relativePath))
+  )
+}
+
+function isPathChainWithinBoundary(
+  path: string,
+  pathBoundary: string,
+  canonicalBoundary: string,
+): boolean {
+  const resolvedBoundary = resolve(pathBoundary)
+  let currentPath = resolve(path)
+
+  while (true) {
+    const realPath = canonicalPath(currentPath)
+    if (realPath === undefined || !isWithinBoundary(canonicalBoundary, realPath)) {
+      return false
+    }
+    if (currentPath === resolvedBoundary) {
+      return true
+    }
+
+    const parent = dirname(currentPath)
+    if (parent === currentPath) {
+      return false
+    }
+    currentPath = parent
+  }
+}
+
+function isFileWithinBoundary(
+  path: string,
+  pathBoundary: string,
+  canonicalBoundary: string,
+): boolean {
+  if (!isPathChainWithinBoundary(path, pathBoundary, canonicalBoundary)) {
+    return false
+  }
+
   try {
     return statSync(path).isFile()
   } catch {
@@ -15,7 +64,7 @@ function isFile(path: string): boolean {
   }
 }
 
-function findWebEntry(nodeModules: string): string | undefined {
+function findWebEntry(nodeModules: string, boundary: string): string | undefined {
   const visitedDirectories = new Set<string>()
   const directories = [nodeModules]
 
@@ -25,10 +74,8 @@ function findWebEntry(nodeModules: string): string | undefined {
       break
     }
 
-    let realDirectory: string
-    try {
-      realDirectory = realpathSync(directory)
-    } catch {
+    const realDirectory = canonicalPath(directory)
+    if (realDirectory === undefined || !isWithinBoundary(boundary, realDirectory)) {
       continue
     }
 
@@ -45,7 +92,7 @@ function findWebEntry(nodeModules: string): string | undefined {
         'dist',
         'index.html',
       )
-      if (isFile(candidate)) {
+      if (isFileWithinBoundary(candidate, nodeModules, boundary)) {
         return candidate
       }
     }
@@ -85,12 +132,19 @@ export function verifyRuntime(root: string): RuntimeEntries {
   const runtimeRoot = resolve(root)
   const nodeModules = join(runtimeRoot, 'node_modules')
   const cliEntry = join(nodeModules, '@deepseek-ai', 'dsh', 'lib', 'bin.js')
+  const realRuntimeRoot = canonicalPath(runtimeRoot)
+  const realNodeModules = canonicalPath(nodeModules)
 
-  if (!isFile(cliEntry)) {
+  if (
+    realRuntimeRoot === undefined ||
+    realNodeModules === undefined ||
+    !isWithinBoundary(realRuntimeRoot, realNodeModules) ||
+    !isFileWithinBoundary(cliEntry, nodeModules, realNodeModules)
+  ) {
     throw new Error(`Harness CLI is missing: ${cliEntry}`)
   }
 
-  const webEntry = findWebEntry(nodeModules)
+  const webEntry = findWebEntry(nodeModules, realNodeModules)
   if (webEntry === undefined) {
     throw new Error(`Harness Web UI is missing beneath: ${nodeModules}`)
   }

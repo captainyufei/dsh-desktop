@@ -1,7 +1,15 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
+import { assertReleaseTarget } from '../scripts/verify-release-target.ts'
 import { assertSafeRuntimeTarget } from '../scripts/stage-runtime.ts'
 import { verifyRuntime } from '../scripts/verify-runtime.ts'
 
@@ -35,6 +43,24 @@ function makeFakeRuntime({ cli, web }: { cli: boolean; web: boolean }): string {
   return root
 }
 
+function makeWebEntry(root: string): string {
+  return join(
+    root,
+    'node_modules',
+    '.pnpm',
+    '@deepseek-ai+dsh@0.1.0-rc.6',
+    'node_modules',
+    '@deepseek-ai',
+    'dsh-web-frontend',
+    'dist',
+    'index.html',
+  )
+}
+
+function symlinkDirectory(target: string, path: string): void {
+  symlinkSync(target, path, process.platform === 'win32' ? 'junction' : 'dir')
+}
+
 afterEach(() => {
   for (const root of temporaryRoots.splice(0)) {
     rmSync(root, { recursive: true, force: true })
@@ -59,6 +85,63 @@ describe('runtime packaging verification', () => {
       webEntry: expect.stringMatching(/dist[/\\]index\.html$/u),
     })
   })
+
+  it('ignores a Web frontend reached through an external directory symlink', () => {
+    const root = makeFakeRuntime({ cli: true, web: false })
+    const external = makeFakeRuntime({ cli: false, web: true })
+    symlinkDirectory(
+      join(external, 'node_modules'),
+      join(root, 'node_modules', 'external-node-modules'),
+    )
+
+    expect(() => verifyRuntime(root)).toThrow('Harness Web UI is missing')
+  })
+
+  it('rejects a Web frontend whose final file is an external symlink', () => {
+    const root = makeFakeRuntime({ cli: true, web: false })
+    const external = makeFakeRuntime({ cli: false, web: false })
+    const externalEntry = join(external, 'index.html')
+    const webEntry = makeWebEntry(root)
+    mkdirSync(join(webEntry, '..'), { recursive: true })
+    writeFileSync(externalEntry, '<!doctype html>\n')
+    symlinkSync(externalEntry, webEntry, 'file')
+
+    expect(() => verifyRuntime(root)).toThrow('Harness Web UI is missing')
+  })
+
+  it('rejects a Harness CLI whose final file is an external symlink', () => {
+    const root = makeFakeRuntime({ cli: false, web: true })
+    const external = makeFakeRuntime({ cli: false, web: false })
+    const externalEntry = join(external, 'bin.js')
+    const cliEntry = join(root, 'node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js')
+    mkdirSync(join(cliEntry, '..'), { recursive: true })
+    writeFileSync(externalEntry, '#!/usr/bin/env node\n')
+    symlinkSync(externalEntry, cliEntry, 'file')
+
+    expect(() => verifyRuntime(root)).toThrow('Harness CLI is missing')
+  })
+
+  it('terminates safely when an internal directory symlink forms a cycle', () => {
+    const root = makeFakeRuntime({ cli: true, web: false })
+    const nodeModules = join(root, 'node_modules')
+    symlinkDirectory(nodeModules, join(nodeModules, 'cycle'))
+
+    expect(() => verifyRuntime(root)).toThrow('Harness Web UI is missing')
+  })
+})
+
+describe('release target preflight', () => {
+  it('accepts a matching target platform and architecture', () => {
+    expect(() =>
+      assertReleaseTarget('darwin', 'arm64', { platform: 'darwin', architecture: 'arm64' }),
+    ).not.toThrow()
+  })
+
+  it('rejects a release target that does not match the host', () => {
+    expect(() =>
+      assertReleaseTarget('win32', 'x64', { platform: 'darwin', architecture: 'arm64' }),
+    ).toThrow('Release target win32/x64 requires a matching host; current host is darwin/arm64')
+  })
 })
 
 describe('runtime staging safety', () => {
@@ -81,6 +164,7 @@ describe('native package configuration', () => {
   it('copies the verified runtime and desktop resources outside ASAR', () => {
     const manifest = JSON.parse(readFileSync('package.json', 'utf8')) as {
       build?: Record<string, unknown>
+      scripts?: Record<string, string>
     }
 
     expect(manifest.build).toMatchObject({
@@ -107,6 +191,15 @@ describe('native package configuration', () => {
         oneClick: false,
         allowToChangeInstallationDirectory: true,
       },
+    })
+    expect(manifest.scripts).toMatchObject({
+      package: 'pnpm build && pnpm stage:runtime && pnpm verify:runtime && electron-builder --dir',
+      'dist:mac:arm64':
+        'node --import tsx scripts/verify-release-target.ts darwin arm64 && pnpm build && pnpm stage:runtime && pnpm verify:runtime && electron-builder --mac dmg --arm64',
+      'dist:mac:x64':
+        'node --import tsx scripts/verify-release-target.ts darwin x64 && pnpm build && pnpm stage:runtime && pnpm verify:runtime && electron-builder --mac dmg --x64',
+      'dist:win:x64':
+        'node --import tsx scripts/verify-release-target.ts win32 x64 && pnpm build && pnpm stage:runtime && pnpm verify:runtime && electron-builder --win nsis --x64',
     })
   })
 
