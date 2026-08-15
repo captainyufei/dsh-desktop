@@ -3,6 +3,7 @@ import {
   applyWindowAppearance,
   MACOS_COMPACT_BRAND_ELEMENT_ID,
   MACOS_SIDEBAR_TOGGLE_ELEMENT_ID,
+  MACOS_TITLEBAR_HEIGHT,
   MACOS_TITLEBAR_CSS,
   MACOS_TITLEBAR_ELEMENT_ID,
   MACOS_TITLEBAR_SCRIPT,
@@ -25,6 +26,7 @@ describe('desktop window appearance', () => {
     expect(windowAppearanceForPlatform('darwin')).toEqual({ titleBarStyle: 'hiddenInset' })
     expect(windowAppearanceForPlatform('win32')).toEqual({})
     expect(windowAppearanceForPlatform('linux')).toEqual({})
+    expect(MACOS_TITLEBAR_HEIGHT).toBe(44)
   })
 
   it('installs a theme-matched draggable titlebar on macOS', async () => {
@@ -50,6 +52,8 @@ describe('desktop window appearance', () => {
     expect(MACOS_TITLEBAR_CSS).toContain('grid-template-rows: var(--dsh-desktop-titlebar-height)')
     expect(MACOS_TITLEBAR_CSS).toContain('[data-dsh-desktop-frame-collapsed]')
     expect(MACOS_TITLEBAR_CSS).toContain('grid-template-columns: 0 minmax(0, 1fr)')
+    expect(MACOS_TITLEBAR_CSS).toContain('min-width: 42px !important')
+    expect(MACOS_TITLEBAR_CSS).toContain('transition: left 220ms')
     expect(MACOS_TITLEBAR_SCRIPT).toContain(MACOS_TITLEBAR_ELEMENT_ID)
     expect(MACOS_TITLEBAR_SCRIPT).toContain('document.getElementById(id)')
     expect(MACOS_TITLEBAR_SCRIPT).toContain('document.elementsFromPoint(1, sampleY)')
@@ -63,6 +67,8 @@ describe('desktop window appearance', () => {
     expect(MACOS_TITLEBAR_SCRIPT).toContain("setAttribute('data-dsh-desktop-main-title-row'")
     expect(MACOS_TITLEBAR_SCRIPT).toContain("'data-details-collapsed'")
     expect(MACOS_TITLEBAR_SCRIPT).toContain('getDetailsWidth(nextFrame, nextDetailsColumn)')
+    expect(MACOS_TITLEBAR_SCRIPT).toContain("beginSidebarTransition(opening ? 'opening' : 'closing')")
+    expect(MACOS_TITLEBAR_SCRIPT).toContain('lastExpandedSidebarWidth')
   })
 
   it('does not alter Web contents on other platforms', async () => {
