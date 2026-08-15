@@ -32,5 +32,29 @@
     "tsx": "4.23.12",
     "typescript": "7.0.2",
     "vitest": "4.1.10"
+  },
+  "build": {
+    "appId": "com.community.dsh-desktop",
+    "productName": "DSH Desktop",
+    "icon": "build/icon.svg",
+    "beforeBuild": "./scripts/electron-builder-hooks.cjs",
+    "asar": true,
+    "files": ["lib/**", "package.json"],
+    "extraResources": [
+      { "from": "runtime-host/node_modules", "to": "host/node_modules" },
+      { "from": "runtime-host/package.json", "to": "host/package.json" },
+      { "from": "build/trayTemplate.png", "to": "desktop-resources/trayTemplate.png" }
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": ["dmg"]
+    },
+    "win": {
+      "target": ["nsis"]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }
