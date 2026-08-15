@@ -119,7 +119,7 @@ body {
   overflow: hidden !important;
   background: var(--dsw-alias-bg-base, #fff) !important;
   border: 0 !important;
-  box-shadow: inset 0 -1px color-mix(in srgb, currentColor 10%, transparent) !important;
+  box-shadow: none !important;
   -webkit-app-region: drag;
 }
 
@@ -201,11 +201,6 @@ body {
   #${MACOS_SIDEBAR_TOGGLE_ELEMENT_ID} {
     transition: color 120ms ease, opacity 120ms ease, transform 80ms ease;
   }
-
-  :root[data-dsh-desktop-shell-ready] #root [data-dsh-desktop-main-header] {
-    transition: left 220ms cubic-bezier(0.2, 0, 0, 1),
-      right 180ms cubic-bezier(0.2, 0, 0, 1);
-  }
 }
 `
 
@@ -246,7 +241,6 @@ export const MACOS_TITLEBAR_SCRIPT = `
   let shellFrame = null;
   let sidebarColumn = null;
   let detailsColumn = null;
-  let lastExpandedSidebarWidth = 280;
   let sidebarTransition = null;
   let sidebarTransitionTimer = null;
   let updateScheduled = false;
@@ -275,12 +269,14 @@ export const MACOS_TITLEBAR_SCRIPT = `
 
   const beginSidebarTransition = (direction) => {
     sidebarTransition = direction;
+    document.documentElement.setAttribute('data-dsh-desktop-sidebar-transition', direction);
     if (sidebarTransitionTimer !== null) {
       window.clearTimeout(sidebarTransitionTimer);
     }
     sidebarTransitionTimer = window.setTimeout(() => {
       sidebarTransition = null;
       sidebarTransitionTimer = null;
+      document.documentElement.removeAttribute('data-dsh-desktop-sidebar-transition');
       scheduleUpdate();
     }, 260);
   };
@@ -356,21 +352,32 @@ export const MACOS_TITLEBAR_SCRIPT = `
     beginSidebarTransition(opening ? 'opening' : 'closing');
     if (opening) {
       shellFrame?.removeAttribute('data-dsh-desktop-frame-collapsed');
-      document.documentElement.style.setProperty(
-        '--dsh-desktop-titlebar-sidebar-width',
-        lastExpandedSidebarWidth + 'px',
-      );
-    } else {
-      document.documentElement.style.setProperty(
-        '--dsh-desktop-titlebar-sidebar-width',
-        '0px',
-      );
     }
     originalSidebarToggle.click();
     scheduleUpdate();
   });
 
-  const resizeObserver = new ResizeObserver(() => scheduleUpdate());
+  const syncObservedSidebarWidth = () => {
+    if (observedSidebar === null) return;
+    const toggleLabel = originalSidebarToggle?.getAttribute('aria-label') ?? '';
+    const sidebarWidth = Math.max(
+      0,
+      Math.min(window.innerWidth, observedSidebar.getBoundingClientRect().right),
+    );
+    if (
+      sidebarTransition === null
+      && (sidebarWidth < 100 || indicatesCollapsedSidebar(toggleLabel))
+    ) return;
+    document.documentElement.style.setProperty(
+      '--dsh-desktop-titlebar-sidebar-width',
+      sidebarWidth + 'px',
+    );
+  };
+
+  const resizeObserver = new ResizeObserver(() => {
+    syncObservedSidebarWidth();
+    scheduleUpdate();
+  });
 
   const update = () => {
     updateScheduled = false;
@@ -409,7 +416,7 @@ export const MACOS_TITLEBAR_SCRIPT = `
         shellFrame.removeAttribute('data-dsh-desktop-frame-collapsed');
         document.documentElement.style.setProperty(
           '--dsh-desktop-titlebar-sidebar-width',
-          lastExpandedSidebarWidth + 'px',
+          Math.max(0, sidebarColumn.getBoundingClientRect().right) + 'px',
         );
         compactBrand.hidden = true;
         return;
@@ -422,7 +429,7 @@ export const MACOS_TITLEBAR_SCRIPT = `
         shellFrame.removeAttribute('data-dsh-desktop-frame-collapsed');
         document.documentElement.style.setProperty(
           '--dsh-desktop-titlebar-sidebar-width',
-          '0px',
+          Math.max(0, sidebarColumn.getBoundingClientRect().right) + 'px',
         );
         compactBrand.hidden = true;
         return;
@@ -460,11 +467,7 @@ export const MACOS_TITLEBAR_SCRIPT = `
       return;
     }
 
-    const measuredSidebarWidth = Math.max(0, Math.min(window.innerWidth, sidebar.rect.right));
     const toggleLabel = originalSidebarToggle?.getAttribute('aria-label') ?? '';
-    const sidebarCollapsed = sidebarTransition === null && (
-      measuredSidebarWidth < 100 || indicatesCollapsedSidebar(toggleLabel)
-    );
     const nextFrame = (() => {
       let element = sidebar.element.parentElement;
       while (element !== null && element !== root) {
@@ -478,6 +481,16 @@ export const MACOS_TITLEBAR_SCRIPT = `
     const nextSidebarColumn = nextFrame === null
       ? null
       : Array.from(nextFrame.children).find((element) => element.contains(sidebar.element)) ?? null;
+    const measuredSidebarWidth = Math.max(
+      0,
+      Math.min(
+        window.innerWidth,
+        nextSidebarColumn?.getBoundingClientRect().right ?? sidebar.rect.right,
+      ),
+    );
+    const sidebarCollapsed = sidebarTransition === null && (
+      measuredSidebarWidth < 100 || indicatesCollapsedSidebar(toggleLabel)
+    );
     const flowColumns = nextFrame === null
       ? []
       : Array.from(nextFrame.children).filter((element) => {
@@ -505,14 +518,7 @@ export const MACOS_TITLEBAR_SCRIPT = `
       shellFrame?.removeAttribute('data-dsh-desktop-frame-collapsed');
     }
 
-    if (sidebarTransition === null && sidebarCollapsed === false && measuredSidebarWidth >= 100) {
-      lastExpandedSidebarWidth = measuredSidebarWidth;
-    }
-    const sidebarWidth = sidebarTransition === 'opening'
-      ? lastExpandedSidebarWidth
-      : sidebarTransition === 'closing' || sidebarCollapsed
-        ? 0
-        : measuredSidebarWidth;
+    const sidebarWidth = sidebarCollapsed ? 0 : measuredSidebarWidth;
     compactBrand.hidden = true;
     document.documentElement.style.setProperty(
       '--dsh-desktop-titlebar-sidebar-width',
@@ -533,9 +539,10 @@ export const MACOS_TITLEBAR_SCRIPT = `
         : 'rgba(127, 127, 127, 0.18)',
     );
 
-    if (observedSidebar !== sidebar.element) {
+    const nextObservedSidebar = nextSidebarColumn ?? sidebar.element;
+    if (observedSidebar !== nextObservedSidebar) {
       if (observedSidebar !== null) resizeObserver.unobserve(observedSidebar);
-      observedSidebar = sidebar.element;
+      observedSidebar = nextObservedSidebar;
       resizeObserver.observe(observedSidebar);
     }
   };
@@ -588,9 +595,6 @@ export const MACOS_TITLEBAR_SCRIPT = `
     });
   }
   scheduleUpdate();
-  requestAnimationFrame(() => {
-    document.documentElement.setAttribute('data-dsh-desktop-shell-ready', '');
-  });
 })();
 `
 
@@ -604,8 +608,16 @@ export interface WindowAppearanceWebContents {
 
 export function windowAppearanceForPlatform(
   platform: NodeJS.Platform,
-): { titleBarStyle?: 'hiddenInset' } {
-  return platform === 'darwin' ? { titleBarStyle: 'hiddenInset' } : {}
+): {
+  titleBarStyle?: 'hiddenInset'
+  trafficLightPosition?: { x: number; y: number }
+} {
+  return platform === 'darwin'
+    ? {
+        titleBarStyle: 'hiddenInset',
+        trafficLightPosition: { x: 16, y: 15 },
+      }
+    : {}
 }
 
 export async function applyWindowAppearance(

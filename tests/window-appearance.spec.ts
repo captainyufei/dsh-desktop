@@ -23,7 +23,10 @@ function makeWebContents(): WindowAppearanceWebContents & {
 
 describe('desktop window appearance', () => {
   it('uses the native inset titlebar only on macOS', () => {
-    expect(windowAppearanceForPlatform('darwin')).toEqual({ titleBarStyle: 'hiddenInset' })
+    expect(windowAppearanceForPlatform('darwin')).toEqual({
+      titleBarStyle: 'hiddenInset',
+      trafficLightPosition: { x: 16, y: 15 },
+    })
     expect(windowAppearanceForPlatform('win32')).toEqual({})
     expect(windowAppearanceForPlatform('linux')).toEqual({})
     expect(MACOS_TITLEBAR_HEIGHT).toBe(44)
@@ -53,7 +56,8 @@ describe('desktop window appearance', () => {
     expect(MACOS_TITLEBAR_CSS).toContain('[data-dsh-desktop-frame-collapsed]')
     expect(MACOS_TITLEBAR_CSS).toContain('grid-template-columns: 0 minmax(0, 1fr)')
     expect(MACOS_TITLEBAR_CSS).toContain('min-width: 42px !important')
-    expect(MACOS_TITLEBAR_CSS).toContain('transition: left 220ms')
+    expect(MACOS_TITLEBAR_CSS).not.toContain('transition: left 220ms')
+    expect(MACOS_TITLEBAR_CSS).toContain('box-shadow: none !important')
     expect(MACOS_TITLEBAR_SCRIPT).toContain(MACOS_TITLEBAR_ELEMENT_ID)
     expect(MACOS_TITLEBAR_SCRIPT).toContain('document.getElementById(id)')
     expect(MACOS_TITLEBAR_SCRIPT).toContain('document.elementsFromPoint(1, sampleY)')
@@ -68,7 +72,11 @@ describe('desktop window appearance', () => {
     expect(MACOS_TITLEBAR_SCRIPT).toContain("'data-details-collapsed'")
     expect(MACOS_TITLEBAR_SCRIPT).toContain('getDetailsWidth(nextFrame, nextDetailsColumn)')
     expect(MACOS_TITLEBAR_SCRIPT).toContain("beginSidebarTransition(opening ? 'opening' : 'closing')")
-    expect(MACOS_TITLEBAR_SCRIPT).toContain('lastExpandedSidebarWidth')
+    expect(MACOS_TITLEBAR_SCRIPT).toContain('syncObservedSidebarWidth')
+    expect(MACOS_TITLEBAR_SCRIPT).toContain('nextSidebarColumn?.getBoundingClientRect().right')
+    expect(MACOS_TITLEBAR_SCRIPT).toContain('const nextObservedSidebar = nextSidebarColumn ?? sidebar.element')
+    expect(MACOS_TITLEBAR_SCRIPT).toContain('if (sidebarCollapsed)')
+    expect(MACOS_TITLEBAR_SCRIPT).toContain("removeAttribute('data-dsh-desktop-sidebar-transition')")
   })
 
   it('does not alter Web contents on other platforms', async () => {
