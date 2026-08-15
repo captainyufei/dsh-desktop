@@ -8,6 +8,8 @@ export const MACOS_TITLEBAR_CSS = `
   --dsh-desktop-titlebar-height: ${MACOS_TITLEBAR_HEIGHT}px;
   --dsh-desktop-titlebar-main-background: var(--dsw-alias-bg-base, #fff);
   --dsh-desktop-titlebar-sidebar-width: 0px;
+  --dsh-desktop-details-width: 0px;
+  --dsh-desktop-toolbar-safe-left: 120px;
   --dsh-desktop-titlebar-sidebar-background: var(--dsh-desktop-titlebar-main-background);
   --dsh-desktop-titlebar-sidebar-divider: transparent;
   --dsh-desktop-toolbar-control-color: var(--dsw-alias-label-secondary, currentColor);
@@ -27,9 +29,10 @@ body {
 #${MACOS_TITLEBAR_ELEMENT_ID} {
   position: fixed;
   inset: 0 0 auto 0;
-  z-index: 2147483647;
+  z-index: 2147483645;
   height: var(--dsh-desktop-titlebar-height);
   background: var(--dsh-desktop-titlebar-main-background);
+  box-shadow: inset 0 -1px color-mix(in srgb, currentColor 10%, transparent);
   -webkit-app-region: drag;
   user-select: none;
 }
@@ -54,20 +57,26 @@ body {
   height: 28px;
   padding: 0;
   place-items: center;
-  color: var(--dsh-desktop-toolbar-control-color);
-  background: transparent;
-  border: 0;
+  color: var(--dsh-desktop-toolbar-control-color) !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  background: transparent !important;
+  border: 0 !important;
   border-radius: 7px;
-  cursor: default;
+  box-shadow: none !important;
+  cursor: pointer;
+  opacity: 0.72;
   -webkit-app-region: no-drag;
 }
 
 #${MACOS_SIDEBAR_TOGGLE_ELEMENT_ID}:hover {
   color: var(--dsw-alias-label-primary, currentColor);
-  background: color-mix(in srgb, currentColor 10%, transparent);
+  background: transparent !important;
+  opacity: 1;
 }
 
 #${MACOS_SIDEBAR_TOGGLE_ELEMENT_ID}:active {
+  background: color-mix(in srgb, currentColor 10%, transparent) !important;
   transform: scale(0.96);
 }
 
@@ -86,44 +95,100 @@ body {
   height: 16px;
 }
 
-#${MACOS_COMPACT_BRAND_ELEMENT_ID} {
-  position: fixed;
-  top: 50px;
-  left: 10px;
-  z-index: 2147483646;
-  display: grid;
-  width: 36px;
-  height: 36px;
-  place-items: center;
-  pointer-events: none;
-  user-select: none;
-}
-
-#${MACOS_COMPACT_BRAND_ELEMENT_ID} img {
-  display: block;
-  width: 24px;
-  height: 24px;
-}
-
 #root [data-dsh-desktop-original-sidebar-toggle] {
   visibility: hidden !important;
   pointer-events: none !important;
 }
 
 #root [data-dsh-desktop-main-header] {
-  padding-left: 28px !important;
+  position: fixed !important;
+  inset: 0 var(--dsh-desktop-details-width) auto max(
+    var(--dsh-desktop-titlebar-sidebar-width),
+    var(--dsh-desktop-toolbar-safe-left)
+  ) !important;
+  z-index: 2147483646 !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, max-content) max-content minmax(20px, 1fr) max-content !important;
+  grid-template-rows: var(--dsh-desktop-titlebar-height) !important;
+  column-gap: 18px !important;
+  box-sizing: border-box !important;
+  width: auto !important;
+  height: var(--dsh-desktop-titlebar-height) !important;
+  min-height: var(--dsh-desktop-titlebar-height) !important;
+  padding: 0 16px 0 20px !important;
+  overflow: hidden !important;
   background: var(--dsw-alias-bg-base, #fff) !important;
-  border-bottom: 1px solid color-mix(in srgb, currentColor 9%, transparent) !important;
+  border: 0 !important;
+  box-shadow: inset 0 -1px color-mix(in srgb, currentColor 10%, transparent) !important;
+  -webkit-app-region: drag;
+}
+
+#root [data-dsh-desktop-main-title-row] {
+  display: contents !important;
+}
+
+#root [data-dsh-desktop-main-title-cluster] {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  min-width: 0 !important;
+  height: var(--dsh-desktop-titlebar-height) !important;
+  gap: 10px !important;
+  overflow: hidden !important;
 }
 
 #root [data-dsh-desktop-main-tabs] {
-  position: relative;
-  z-index: 1;
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  align-self: stretch !important;
+  display: flex !important;
+  align-items: stretch !important;
+  gap: 18px !important;
+  height: var(--dsh-desktop-titlebar-height) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  -webkit-app-region: no-drag;
+}
+
+#root [data-dsh-desktop-main-tabs] > button {
+  display: flex !important;
+  align-items: center !important;
+  height: var(--dsh-desktop-titlebar-height) !important;
+  padding: 1px 0 0 !important;
+}
+
+#root [data-dsh-desktop-main-utilities] {
+  grid-column: 4 !important;
+  grid-row: 1 !important;
+  align-self: center !important;
+  height: 30px !important;
+  margin: 0 !important;
+  -webkit-app-region: no-drag;
+}
+
+#root [data-dsh-desktop-main-header] button,
+#root [data-dsh-desktop-main-header] a,
+#root [data-dsh-desktop-main-header] input,
+#root [data-dsh-desktop-main-header] [role='button'] {
+  -webkit-app-region: no-drag;
+}
+
+#root [data-dsh-desktop-frame-collapsed] {
+  grid-template-columns: 0 minmax(0, 1fr) var(--dsh-desktop-details-width) !important;
+}
+
+#root [data-dsh-desktop-frame-collapsed] > [data-dsh-desktop-sidebar-column] {
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
+  overflow: hidden !important;
+  visibility: hidden !important;
+  border-right: 0 !important;
+  pointer-events: none !important;
 }
 
 @media (prefers-reduced-motion: no-preference) {
   #${MACOS_SIDEBAR_TOGGLE_ELEMENT_ID} {
-    transition: color 120ms ease, background-color 120ms ease, transform 80ms ease;
+    transition: color 120ms ease, opacity 120ms ease, transform 80ms ease;
   }
 }
 `
@@ -162,6 +227,9 @@ export const MACOS_TITLEBAR_SCRIPT = `
   let observedSidebar = null;
   let originalSidebarToggle = null;
   let mainHeader = null;
+  let shellFrame = null;
+  let sidebarColumn = null;
+  let detailsColumn = null;
   let updateScheduled = false;
 
   const root = document.getElementById('root');
@@ -169,6 +237,21 @@ export const MACOS_TITLEBAR_SCRIPT = `
   const isSidebarToggle = (button) => {
     const label = button.getAttribute('aria-label') ?? '';
     return label.includes('侧边栏') || /sidebar/i.test(label);
+  };
+
+  const indicatesCollapsedSidebar = (label) =>
+    label.includes('展开侧边栏')
+    || label.includes('打开侧边栏')
+    || label.includes('显示侧边栏')
+    || /(?:show|open|expand) sidebar/i.test(label);
+
+  const getDetailsWidth = (frame, column) => {
+    const authoredColumns = frame?.style.gridTemplateColumns ?? '';
+    const authoredWidth = authoredColumns.match(/([0-9]+(?:[.][0-9]+)?)px[ ]*$/)?.[1];
+    if (authoredWidth !== undefined) {
+      return Number.parseFloat(authoredWidth);
+    }
+    return column?.getBoundingClientRect().width ?? 0;
   };
 
   const syncInterfaceControls = () => {
@@ -207,14 +290,30 @@ export const MACOS_TITLEBAR_SCRIPT = `
     if (nextMainHeader !== mainHeader) {
       if (mainHeader !== null) {
         mainHeader.removeAttribute('data-dsh-desktop-main-header');
-        mainHeader.querySelector('[data-dsh-desktop-main-tabs]')
-          ?.removeAttribute('data-dsh-desktop-main-tabs');
+        mainHeader.querySelectorAll('[data-dsh-desktop-main-tabs], [data-dsh-desktop-main-title-row], [data-dsh-desktop-main-title-cluster], [data-dsh-desktop-main-utilities]')
+          .forEach((element) => {
+            for (const attribute of Array.from(element.attributes)) {
+              if (attribute.name.startsWith('data-dsh-desktop-main-')) {
+                element.removeAttribute(attribute.name);
+              }
+            }
+          });
       }
       mainHeader = nextMainHeader;
     }
     if (mainHeader !== null) {
       mainHeader.setAttribute('data-dsh-desktop-main-header', '');
-      conversationTab?.parentElement?.setAttribute('data-dsh-desktop-main-tabs', '');
+      const tabs = conversationTab?.parentElement ?? null;
+      const titleRow = Array.from(mainHeader.children)
+        .find((element) => element !== tabs && element.contains(tabs) === false) ?? null;
+      const titleCluster = titleRow?.firstElementChild ?? null;
+      const utilities = titleRow?.lastElementChild ?? null;
+      tabs?.setAttribute('data-dsh-desktop-main-tabs', '');
+      titleRow?.setAttribute('data-dsh-desktop-main-title-row', '');
+      titleCluster?.setAttribute('data-dsh-desktop-main-title-cluster', '');
+      if (utilities !== titleCluster) {
+        utilities?.setAttribute('data-dsh-desktop-main-utilities', '');
+      }
     }
   };
 
@@ -251,8 +350,32 @@ export const MACOS_TITLEBAR_SCRIPT = `
     );
 
     if (sidebar === null) {
-      titlebar.style.setProperty('--dsh-desktop-titlebar-sidebar-width', '0px');
+      const toggleLabel = originalSidebarToggle?.getAttribute('aria-label') ?? '';
+      const sidebarCollapsed = indicatesCollapsedSidebar(toggleLabel);
+      if (
+        sidebarCollapsed
+        && shellFrame?.isConnected === true
+        && sidebarColumn?.isConnected === true
+      ) {
+        shellFrame.setAttribute('data-dsh-desktop-frame-collapsed', '');
+        sidebarColumn.setAttribute('data-dsh-desktop-sidebar-column', '');
+        const detailsWidth = getDetailsWidth(shellFrame, detailsColumn);
+        document.documentElement.style.setProperty('--dsh-desktop-titlebar-sidebar-width', '0px');
+        document.documentElement.style.setProperty(
+          '--dsh-desktop-details-width',
+          Math.max(0, detailsWidth) + 'px',
+        );
+        compactBrand.hidden = true;
+        return;
+      }
+      document.documentElement.style.setProperty('--dsh-desktop-titlebar-sidebar-width', '0px');
+      document.documentElement.style.setProperty('--dsh-desktop-details-width', '0px');
       compactBrand.hidden = true;
+      shellFrame?.removeAttribute('data-dsh-desktop-frame-collapsed');
+      sidebarColumn?.removeAttribute('data-dsh-desktop-sidebar-column');
+      shellFrame = null;
+      sidebarColumn = null;
+      detailsColumn = null;
       if (observedSidebar !== null) {
         resizeObserver.unobserve(observedSidebar);
         observedSidebar = null;
@@ -260,14 +383,65 @@ export const MACOS_TITLEBAR_SCRIPT = `
       return;
     }
 
-    const sidebarWidth = Math.max(0, Math.min(window.innerWidth, sidebar.rect.right));
-    compactBrand.hidden = sidebarWidth >= 100 || compactBrand.childElementCount === 0;
-    titlebar.style.setProperty('--dsh-desktop-titlebar-sidebar-width', sidebarWidth + 'px');
-    titlebar.style.setProperty(
+    const measuredSidebarWidth = Math.max(0, Math.min(window.innerWidth, sidebar.rect.right));
+    const toggleLabel = originalSidebarToggle?.getAttribute('aria-label') ?? '';
+    const sidebarCollapsed = measuredSidebarWidth < 100
+      || indicatesCollapsedSidebar(toggleLabel);
+    const nextFrame = (() => {
+      let element = sidebar.element.parentElement;
+      while (element !== null && element !== root) {
+        if (getComputedStyle(element).display === 'grid' && element.children.length >= 2) {
+          return element;
+        }
+        element = element.parentElement;
+      }
+      return null;
+    })();
+    const nextSidebarColumn = nextFrame === null
+      ? null
+      : Array.from(nextFrame.children).find((element) => element.contains(sidebar.element)) ?? null;
+    const flowColumns = nextFrame === null
+      ? []
+      : Array.from(nextFrame.children).filter((element) => {
+        const position = getComputedStyle(element).position;
+        return position !== 'absolute' && position !== 'fixed';
+      });
+    const nextDetailsColumn = flowColumns.length >= 3
+      ? flowColumns.at(-1) ?? null
+      : null;
+    const detailsWidth = getDetailsWidth(nextFrame, nextDetailsColumn);
+
+    if (shellFrame !== nextFrame) {
+      shellFrame?.removeAttribute('data-dsh-desktop-frame-collapsed');
+      shellFrame = nextFrame;
+    }
+    if (sidebarColumn !== nextSidebarColumn) {
+      sidebarColumn?.removeAttribute('data-dsh-desktop-sidebar-column');
+      sidebarColumn = nextSidebarColumn;
+    }
+    detailsColumn = nextDetailsColumn;
+    sidebarColumn?.setAttribute('data-dsh-desktop-sidebar-column', '');
+    if (sidebarCollapsed) {
+      shellFrame?.setAttribute('data-dsh-desktop-frame-collapsed', '');
+    } else {
+      shellFrame?.removeAttribute('data-dsh-desktop-frame-collapsed');
+    }
+
+    const sidebarWidth = sidebarCollapsed ? 0 : measuredSidebarWidth;
+    compactBrand.hidden = true;
+    document.documentElement.style.setProperty(
+      '--dsh-desktop-titlebar-sidebar-width',
+      sidebarWidth + 'px',
+    );
+    document.documentElement.style.setProperty(
+      '--dsh-desktop-details-width',
+      Math.max(0, detailsWidth) + 'px',
+    );
+    document.documentElement.style.setProperty(
       '--dsh-desktop-titlebar-sidebar-background',
       sidebar.style.backgroundColor,
     );
-    titlebar.style.setProperty(
+    document.documentElement.style.setProperty(
       '--dsh-desktop-titlebar-sidebar-divider',
       Number.parseFloat(sidebar.style.borderRightWidth) > 0
         ? sidebar.style.borderRightColor
@@ -300,6 +474,7 @@ export const MACOS_TITLEBAR_SCRIPT = `
   if (root !== null) themeObserver.observe(root, themeObserverOptions);
   const containsShellControls = (node) => node instanceof Element && (
     node.matches('header, button[aria-label*="侧边栏"], button[aria-label*="sidebar" i]')
+    || node.closest('header') !== null
     || node.querySelector('header, button[aria-label*="侧边栏"], button[aria-label*="sidebar" i]') !== null
   );
   if (root !== null) {
@@ -307,9 +482,25 @@ export const MACOS_TITLEBAR_SCRIPT = `
       const shellChanged = originalSidebarToggle?.isConnected === false
         || mainHeader?.isConnected === false
         || records.some((record) =>
-          [...record.addedNodes, ...record.removedNodes].some(containsShellControls));
+          record.target === shellFrame
+          || record.target === sidebarColumn
+          || record.target === detailsColumn
+          || containsShellControls(record.target)
+          || [...record.addedNodes, ...record.removedNodes].some(containsShellControls));
       if (shellChanged) scheduleUpdate();
-    }).observe(root, { childList: true, subtree: true });
+    }).observe(root, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: [
+        'class',
+        'style',
+        'aria-label',
+        'aria-hidden',
+        'data-details-collapsed',
+        'data-sidebar-collapsed',
+      ],
+    });
   }
   scheduleUpdate();
 })();
