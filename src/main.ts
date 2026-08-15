@@ -11,6 +11,7 @@ import {
   Tray,
 } from 'electron'
 import { APP_ID, APP_NAME } from './app-metadata.ts'
+import { runCleanupStages } from './cleanup.ts'
 import { createDiagnostics } from './diagnostics.ts'
 import { assertRuntimeArtifacts, resolveHostPaths, type HostPaths } from './host/paths.ts'
 import {
@@ -20,6 +21,10 @@ import {
   type HostSupervisor,
 } from './host/supervisor.ts'
 import { classifyNavigation } from './navigation-policy.ts'
+import {
+  createRecoveryCoordinator,
+  type RecoveryTicket,
+} from './recovery-coordinator.ts'
 import { createDesktopLifecycle } from './window-lifecycle.ts'
 
 const MAX_HOST_LOG_CHARS = 32_768
@@ -36,14 +41,13 @@ if (!app.requestSingleInstanceLock()) {
 function startApplication(): void {
   const diagnostics = createDiagnostics(app.getPath('userData'))
   let mainWindow: BrowserWindow | undefined
+  let mainWindowReady = false
   let tray: Tray | undefined
   let host: HostSupervisor | undefined
   let hostOrigin: string | undefined
   let hostExited = true
   let releaseQuit = false
   let runtimePaths: HostPaths | undefined
-  let rendererRecovery: Promise<void> | undefined
-  let postStartRecovery: Promise<void> | undefined
 
   const logHostChunk = (streamName: 'stdout' | 'stderr', chunk: string): void => {
     const bounded = chunk.length > MAX_HOST_LOG_CHARS
@@ -89,11 +93,14 @@ function startApplication(): void {
           return
         }
         hostExited = true
+        hostOrigin = undefined
         diagnostics.error(
           'Harness Web Host exited unexpectedly',
           signal === null ? `code ${code ?? 'unknown'}` : `signal ${signal}`,
         )
-        void handlePostStartHostFailure(supervisor)
+        void recoveryCoordinator.schedule((ticket) => (
+          handlePostStartHostFailure(supervisor, ticket)
+        ))
       },
     })
     return supervisor
@@ -135,9 +142,12 @@ function startApplication(): void {
     shell.showItemInFolder(diagnostics.path)
   }
 
-  const showStartupRecovery = async (error: unknown): Promise<boolean> => {
+  const showStartupRecovery = async (
+    error: unknown,
+    ticket?: RecoveryTicket,
+  ): Promise<boolean> => {
     diagnostics.error('Desktop startup failed', error)
-    while (!lifecycle.isQuitting) {
+    while (!lifecycle.isQuitting && (ticket === undefined || ticket.isCurrent())) {
       const { response } = await dialog.showMessageBox({
         type: 'error',
         title: APP_NAME,
@@ -148,6 +158,9 @@ function startApplication(): void {
         cancelId: 2,
         noLink: true,
       })
+      if (ticket !== undefined && !ticket.isCurrent()) {
+        return false
+      }
       if (response === 0) {
         return true
       }
@@ -161,12 +174,15 @@ function startApplication(): void {
     return false
   }
 
-  const startHostWithRecovery = async (): Promise<string | undefined> => {
-    while (!lifecycle.isQuitting) {
+  const startHostWithRecovery = async (
+    ticket?: RecoveryTicket,
+  ): Promise<string | undefined> => {
+    while (!lifecycle.isQuitting && (ticket === undefined || ticket.isCurrent())) {
       try {
-        return await replaceHost()
+        const origin = await replaceHost()
+        return ticket === undefined || ticket.isCurrent() ? origin : undefined
       } catch (error) {
-        if (!await showStartupRecovery(error)) {
+        if (!await showStartupRecovery(error, ticket)) {
           return undefined
         }
       }
@@ -184,22 +200,23 @@ function startApplication(): void {
   }
 
   const recoverRenderer = (window: BrowserWindow, error: Error): void => {
-    if (rendererRecovery !== undefined) {
-      return
-    }
-    rendererRecovery = (async () => {
-      if (!await showStartupRecovery(error)) {
+    void recoveryCoordinator.schedule(async (ticket) => {
+      if (!await showStartupRecovery(error, ticket) || !ticket.isCurrent()) {
         return
       }
-      const origin = await startHostWithRecovery()
-      if (origin === undefined || window.isDestroyed() || lifecycle.isQuitting) {
+      hostOrigin = undefined
+      hostExited = true
+      mainWindowReady = false
+      if (!window.isDestroyed()) {
+        window.destroy()
+      }
+      if (!ticket.isCurrent()) {
         return
       }
-      window.webContents.removeAllListeners('did-fail-load')
-      attachLoadFailureHandler(window)
-      loadCurrentOrigin(window)
-    })().finally(() => {
-      rendererRecovery = undefined
+      const origin = await startHostWithRecovery(ticket)
+      if (origin !== undefined && ticket.isCurrent() && !lifecycle.isQuitting) {
+        await lifecycle.showWindow()
+      }
     })
   }
 
@@ -213,7 +230,11 @@ function startApplication(): void {
         }
         const error = new Error(`Harness page failed to load (${errorCode}: ${errorDescription})`)
         diagnostics.error('Harness page load failed', error)
-        if (!hostExited && host !== undefined && hostOrigin !== undefined && !retried) {
+        if (hostExited || host === undefined || hostOrigin === undefined) {
+          diagnostics.log('Harness page recovery deferred to Host recovery')
+          return
+        }
+        if (!retried) {
           retried = true
           diagnostics.log('Retrying Harness page load once')
           loadCurrentOrigin(window)
@@ -244,11 +265,13 @@ function startApplication(): void {
       },
     })
     mainWindow = window
+    mainWindowReady = false
 
     window.on('close', (event) => lifecycle.onWindowClose(event))
     window.on('closed', () => {
       if (mainWindow === window) {
         mainWindow = undefined
+        mainWindowReady = false
       }
     })
 
@@ -292,6 +315,9 @@ function startApplication(): void {
     const loaded = new Promise<BrowserWindow>((resolve) => {
       window.webContents.once('did-finish-load', () => {
         diagnostics.log('Harness page finished loading')
+        if (mainWindow === window && !window.isDestroyed()) {
+          mainWindowReady = true
+        }
         resolve(window)
       })
       // Let the lifecycle state machine observe a window destroyed while its
@@ -304,24 +330,64 @@ function startApplication(): void {
   }
 
   const lifecycle = createDesktopLifecycle({
-    getWindow: () => mainWindow,
+    getWindow: () => mainWindowReady ? mainWindow : undefined,
     createWindow,
     disposeHost: async () => {
-      diagnostics.log('Shutting down desktop')
+      try {
+        diagnostics.log('Shutting down desktop')
+      } catch {
+        // Continue cleanup even if diagnostics cannot accept another line.
+      }
       const currentHost = host
       host = undefined
       hostOrigin = undefined
       hostExited = true
-      if (currentHost !== undefined) {
-        await currentHost.shutdown()
+      mainWindowReady = false
+
+      const reportCleanupError = (stage: string, error: unknown): void => {
+        try {
+          diagnostics.error(`Desktop cleanup failed during ${stage}`, error)
+        } catch {
+          // Diagnostics close below remains the final cleanup boundary.
+        }
       }
-      if (mainWindow !== undefined && !mainWindow.isDestroyed()) {
-        mainWindow.destroy()
+
+      try {
+        await runCleanupStages([
+          {
+            name: 'Host shutdown',
+            run: async () => {
+              if (currentHost !== undefined) {
+                await currentHost.shutdown()
+              }
+            },
+          },
+          {
+            name: 'window destruction',
+            run: () => {
+              const windowToDestroy = mainWindow
+              mainWindow = undefined
+              if (windowToDestroy !== undefined && !windowToDestroy.isDestroyed()) {
+                windowToDestroy.destroy()
+              }
+            },
+          },
+          {
+            name: 'tray destruction',
+            run: () => {
+              const trayToDestroy = tray
+              tray = undefined
+              trayToDestroy?.destroy()
+            },
+          },
+        ], reportCleanupError)
+      } finally {
+        try {
+          await diagnostics.close()
+        } catch (error) {
+          console.error(`${APP_NAME} diagnostics close failed`, error)
+        }
       }
-      mainWindow = undefined
-      tray?.destroy()
-      tray = undefined
-      await diagnostics.close()
     },
     quit: () => {
       releaseQuit = true
@@ -330,44 +396,57 @@ function startApplication(): void {
     reportError: (error) => diagnostics.error('Desktop lifecycle error', error),
   })
 
-  async function handlePostStartHostFailure(failedHost: HostSupervisor): Promise<void> {
-    if (postStartRecovery !== undefined || lifecycle.isQuitting || host !== failedHost) {
+  const recoveryCoordinator = createRecoveryCoordinator({
+    onError: async (error) => {
+      try {
+        diagnostics.error('Desktop recovery failed terminally', error)
+      } catch {
+        // Quit remains mandatory even when the diagnostics sink has failed.
+      }
+      await lifecycle.requestQuit()
+    },
+  })
+
+  async function handlePostStartHostFailure(
+    failedHost: HostSupervisor,
+    ticket: RecoveryTicket,
+  ): Promise<void> {
+    if (lifecycle.isQuitting || host !== failedHost || !ticket.isCurrent()) {
       return
     }
-    postStartRecovery = (async () => {
-      if (mainWindow !== undefined && !mainWindow.isDestroyed()) {
-        mainWindow.destroy()
-        mainWindow = undefined
-      }
-      while (!lifecycle.isQuitting) {
-        const { response } = await dialog.showMessageBox({
-          type: 'error',
-          title: APP_NAME,
-          message: 'Harness stopped unexpectedly.',
-          detail: 'The local Harness Web Host is no longer running.',
-          buttons: ['Restart Host', 'Open Logs', 'Quit'],
-          defaultId: 0,
-          cancelId: 2,
-          noLink: true,
-        })
-        if (response === 1) {
-          openLogs()
-          continue
-        }
-        if (response === 2) {
-          await lifecycle.requestQuit()
-          return
-        }
-        const origin = await startHostWithRecovery()
-        if (origin !== undefined) {
-          await lifecycle.showWindow()
-        }
+    mainWindowReady = false
+    if (mainWindow !== undefined && !mainWindow.isDestroyed()) {
+      mainWindow.destroy()
+      mainWindow = undefined
+    }
+    while (!lifecycle.isQuitting && ticket.isCurrent()) {
+      const { response } = await dialog.showMessageBox({
+        type: 'error',
+        title: APP_NAME,
+        message: 'Harness stopped unexpectedly.',
+        detail: 'The local Harness Web Host is no longer running.',
+        buttons: ['Restart Host', 'Open Logs', 'Quit'],
+        defaultId: 0,
+        cancelId: 2,
+        noLink: true,
+      })
+      if (!ticket.isCurrent()) {
         return
       }
-    })().finally(() => {
-      postStartRecovery = undefined
-    })
-    await postStartRecovery
+      if (response === 1) {
+        openLogs()
+        continue
+      }
+      if (response === 2) {
+        await lifecycle.requestQuit()
+        return
+      }
+      const origin = await startHostWithRecovery(ticket)
+      if (origin !== undefined && ticket.isCurrent()) {
+        await lifecycle.showWindow()
+      }
+      return
+    }
   }
 
   const createTray = (): void => {
@@ -455,10 +534,23 @@ function startApplication(): void {
       await lifecycle.showWindow()
     }
   }).catch(async (error: unknown) => {
-    diagnostics.error('Unhandled application startup failure', error)
-    if (app.isReady()) {
-      await showStartupRecovery(error)
+    try {
+      diagnostics.error('Unhandled application startup failure', error)
+    } catch {
+      // The deterministic quit below does not depend on diagnostics.
     }
-    await lifecycle.requestQuit()
+    try {
+      if (app.isReady()) {
+        await showStartupRecovery(error)
+      }
+    } catch (recoveryError) {
+      try {
+        diagnostics.error('Application startup recovery failed terminally', recoveryError)
+      } catch {
+        // The deterministic quit below does not depend on diagnostics.
+      }
+    } finally {
+      await lifecycle.requestQuit()
+    }
   })
 }

@@ -111,6 +111,40 @@ describe('desktop lifecycle', () => {
     await Promise.all([first, second])
   })
 
+  it('does not restore an allocated window before async creation publishes it', async () => {
+    const allocated = new FakeWindow()
+    allocated.visible = false
+    let published = false
+    let resolveReady: (() => void) | undefined
+    const ready = new Promise<void>((resolve) => {
+      resolveReady = resolve
+    })
+    const lifecycle = createDesktopLifecycle({
+      getWindow: () => published ? allocated : undefined,
+      createWindow: async () => {
+        await ready
+        published = true
+        return allocated
+      },
+      disposeHost: () => Promise.resolve(),
+      quit: vi.fn(),
+      reportError: vi.fn(),
+    })
+
+    const initial = lifecycle.showWindow()
+    const trayRestore = lifecycle.showWindow()
+
+    expect(trayRestore).toBe(initial)
+    expect(allocated.show).not.toHaveBeenCalled()
+    expect(allocated.focus).not.toHaveBeenCalled()
+
+    resolveReady?.()
+    await Promise.all([initial, trayRestore])
+
+    expect(allocated.show).toHaveBeenCalledOnce()
+    expect(allocated.focus).toHaveBeenCalledOnce()
+  })
+
   it('coalesces a re-entrant window creation request', async () => {
     let lifecycle!: ReturnType<typeof createDesktopLifecycle>
     let reentrant: Promise<void> | undefined
