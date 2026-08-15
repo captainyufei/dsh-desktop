@@ -1,0 +1,36 @@
+{
+  "name": "dsh-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "lib/main.js",
+  "packageManager": "pnpm@10.29.2",
+  "engines": { "node": ">=24.0.0" },
+  "scripts": {
+    "build": "tsc -p tsconfig.json --noEmit && tsdown",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:smoke": "cross-env DSH_RUN_HARNESS_SMOKE=1 vitest run tests/harness-smoke.spec.ts",
+    "dev": "pnpm build && electron .",
+    "stage:runtime": "node --import tsx scripts/stage-runtime.ts",
+    "verify:runtime": "node --import tsx scripts/verify-runtime.ts runtime-host",
+    "package": "pnpm build && pnpm stage:runtime && pnpm verify:runtime && electron-builder --dir",
+    "dist:mac:arm64": "pnpm build && pnpm stage:runtime && pnpm verify:runtime && electron-builder --mac dmg --arm64",
+    "dist:mac:x64": "pnpm build && pnpm stage:runtime && pnpm verify:runtime && electron-builder --mac dmg --x64",
+    "dist:win:x64": "pnpm build && pnpm stage:runtime && pnpm verify:runtime && electron-builder --win nsis --x64"
+  },
+  "dependencies": {
+    "@deepseek-ai/dsh": "0.1.0-rc.6"
+  },
+  "devDependencies": {
+    "@types/node": "26.2.0",
+    "cross-env": "10.1.0",
+    "electron": "43.4.0",
+    "electron-builder": "26.15.3",
+    "tsdown": "0.22.14",
+    "tsx": "4.23.12",
+    "typescript": "7.0.2",
+    "vitest": "4.1.10"
+  }
+}
