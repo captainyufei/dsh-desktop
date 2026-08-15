@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   applyWindowAppearance,
+  MACOS_COMPACT_BRAND_ELEMENT_ID,
+  MACOS_SIDEBAR_TOGGLE_ELEMENT_ID,
   MACOS_TITLEBAR_CSS,
   MACOS_TITLEBAR_ELEMENT_ID,
   MACOS_TITLEBAR_SCRIPT,
@@ -39,11 +41,16 @@ describe('desktop window appearance', () => {
     expect(MACOS_TITLEBAR_CSS).toContain('padding-top: var(--dsh-desktop-titlebar-height)')
     expect(MACOS_TITLEBAR_CSS).toContain('titlebar-sidebar-width')
     expect(MACOS_TITLEBAR_CSS).toContain('border-right: 1px solid')
+    expect(MACOS_TITLEBAR_CSS).toContain(`#${MACOS_SIDEBAR_TOGGLE_ELEMENT_ID}`)
+    expect(MACOS_TITLEBAR_CSS).toContain(`#${MACOS_COMPACT_BRAND_ELEMENT_ID}`)
+    expect(MACOS_TITLEBAR_CSS).toContain('[data-dsh-desktop-main-header]')
     expect(MACOS_TITLEBAR_SCRIPT).toContain(MACOS_TITLEBAR_ELEMENT_ID)
     expect(MACOS_TITLEBAR_SCRIPT).toContain('document.getElementById(id)')
     expect(MACOS_TITLEBAR_SCRIPT).toContain('document.elementsFromPoint(1, sampleY)')
     expect(MACOS_TITLEBAR_SCRIPT).toContain('new ResizeObserver')
     expect(MACOS_TITLEBAR_SCRIPT).toContain('new MutationObserver')
+    expect(MACOS_TITLEBAR_SCRIPT).toContain("sidebarToggle.addEventListener('click'")
+    expect(MACOS_TITLEBAR_SCRIPT).toContain("conversationTab?.closest('header')")
   })
 
   it('does not alter Web contents on other platforms', async () => {
