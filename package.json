@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:smoke": "cross-env DSH_RUN_HARNESS_SMOKE=1 vitest run tests/harness-smoke.spec.ts",
+    "licenses:inventory": "pnpm licenses list --prod --json",
     "dev": "pnpm build && electron .",
     "stage:runtime": "node --import tsx scripts/stage-runtime.ts",
     "verify:runtime": "node --import tsx scripts/verify-runtime.ts runtime-host",
