@@ -45,6 +45,10 @@ body {
   content: none;
 }
 
+#${MACOS_TITLEBAR_ELEMENT_ID}[data-dsh-desktop-fallback-drag] {
+  width: 100%;
+}
+
 #${MACOS_SIDEBAR_TOGGLE_ELEMENT_ID} {
   position: absolute;
   top: calc((var(--dsh-desktop-titlebar-height) - 28px) / 2);
@@ -346,6 +350,7 @@ export const MACOS_TITLEBAR_SCRIPT = `
       return text === '对话' || text === 'chat' || text === 'conversation';
     });
     const nextMainHeader = conversationTab?.closest('header') ?? null;
+    titlebar.toggleAttribute('data-dsh-desktop-fallback-drag', nextMainHeader === null);
     if (nextMainHeader !== mainHeader) {
       if (mainHeader !== null) {
         mainHeader.removeAttribute('data-dsh-desktop-main-header');
@@ -610,7 +615,8 @@ export const MACOS_TITLEBAR_SCRIPT = `
   );
   if (root !== null) {
     new MutationObserver((records) => {
-      const shellChanged = originalSidebarToggle?.isConnected === false
+      const shellChanged = mainHeader === null
+        || originalSidebarToggle?.isConnected === false
         || mainHeader?.isConnected === false
         || records.some((record) =>
           record.target === shellFrame

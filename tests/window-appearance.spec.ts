@@ -47,6 +47,7 @@ describe('desktop window appearance', () => {
     expect(MACOS_TITLEBAR_CSS).not.toContain('body::after')
     expect(MACOS_TITLEBAR_CSS).toContain('titlebar-sidebar-width')
     expect(MACOS_TITLEBAR_CSS).toContain(`#${MACOS_SIDEBAR_TOGGLE_ELEMENT_ID}`)
+    expect(MACOS_TITLEBAR_CSS).toContain('[data-dsh-desktop-fallback-drag]')
     expect(MACOS_TITLEBAR_CSS).toContain('background: transparent !important')
     expect(MACOS_TITLEBAR_CSS).toContain('appearance: none !important')
     expect(MACOS_TITLEBAR_CSS).toContain(`#${MACOS_COMPACT_BRAND_ELEMENT_ID}`)
@@ -67,6 +68,10 @@ describe('desktop window appearance', () => {
     expect(MACOS_TITLEBAR_SCRIPT).toContain('new MutationObserver')
     expect(MACOS_TITLEBAR_SCRIPT).toContain("sidebarToggle.addEventListener('click'")
     expect(MACOS_TITLEBAR_SCRIPT).toContain("conversationTab?.closest('header')")
+    expect(MACOS_TITLEBAR_SCRIPT).toContain(
+      "titlebar.toggleAttribute('data-dsh-desktop-fallback-drag', nextMainHeader === null)",
+    )
+    expect(MACOS_TITLEBAR_SCRIPT).toContain('const shellChanged = mainHeader === null')
     expect(MACOS_TITLEBAR_SCRIPT).toContain("label.includes('展开侧边栏')")
     expect(MACOS_TITLEBAR_SCRIPT).toContain("label.includes('打开侧边栏')")
     expect(MACOS_TITLEBAR_SCRIPT).toContain("setAttribute('data-dsh-desktop-frame-collapsed'")
