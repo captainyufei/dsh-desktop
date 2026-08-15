@@ -65,6 +65,15 @@ class SynchronousErrorChild extends FakeChild {
   }
 }
 
+class ErrorOnSigtermChild extends FakeChild {
+  override kill(signal: 'SIGTERM' | 'SIGKILL'): void {
+    super.kill(signal)
+    if (signal === 'SIGTERM') {
+      this.fail(new Error('SIGTERM failed'))
+    }
+  }
+}
+
 function createFixture(
   overrides: Partial<HostSupervisorOptions> = {},
   child = new FakeChild(),
@@ -168,6 +177,33 @@ describe('Harness Web host supervisor', () => {
       expect(fixture.child.killed).toEqual(['SIGTERM', 'SIGKILL'])
       fixture.child.exit(null, 'SIGKILL')
       await Promise.all([first, second])
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('keeps shutdown pending and escalates when SIGTERM reports an error without an exit', async () => {
+    vi.useFakeTimers()
+    try {
+      const fixture = createFixture({}, new ErrorOnSigtermChild())
+      const supervisor = createHostSupervisor(fixture.options)
+      const started = supervisor.start()
+      fixture.child.writeStdout('dsh web: http://127.0.0.1:3080\n')
+      await started
+
+      const shutdown = supervisor.shutdown()
+      let shutdownSettled = false
+      void shutdown.then(() => {
+        shutdownSettled = true
+      })
+      await Promise.resolve()
+      expect(shutdownSettled).toBe(false)
+      expect(fixture.child.killed).toEqual(['SIGTERM'])
+
+      await vi.advanceTimersByTimeAsync(5_000)
+      expect(fixture.child.killed).toEqual(['SIGTERM', 'SIGKILL'])
+      fixture.child.exit(null, 'SIGKILL')
+      await expect(shutdown).resolves.toBeUndefined()
     } finally {
       vi.useRealTimers()
     }

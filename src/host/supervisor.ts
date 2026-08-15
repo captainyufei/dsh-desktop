@@ -150,12 +150,11 @@ class SupervisedHost implements HostSupervisor {
   }
 
   private handleError(error: Error): void {
-    const wasReady = this.state === 'ready'
-    const wasStarting = this.state === 'starting'
-    this.finishChild()
-    if (wasStarting) {
+    if (this.state === 'starting') {
+      // Spawn failures do not reliably emit an exit event, so startup errors are terminal.
+      this.finishChild()
       this.failStartup(error, false)
-    } else if (wasReady) {
+    } else if (this.state === 'ready') {
       this.options.onUnexpectedExit?.(null, null)
     }
   }
