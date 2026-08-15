@@ -34,6 +34,7 @@ export interface HostChild {
 export interface SpawnDshWebOptions {
   readonly nodeExecutable: string
   readonly cliEntry: string
+  readonly profileName: string
   readonly cwd: string
   readonly electronRunAsNode: boolean
   readonly env: NodeJS.ProcessEnv
@@ -273,7 +274,7 @@ export function spawnDshWeb(options: SpawnDshWebOptions): HostChild {
   const child = spawn(options.nodeExecutable, [
     '--expose-internals',
     options.cliEntry,
-    'web',
+    '--profile', options.profileName,
     '--host', '127.0.0.1',
     '--port', '0',
   ], {

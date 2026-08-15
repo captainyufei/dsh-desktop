@@ -5,6 +5,11 @@ import { fileURLToPath } from 'node:url'
 export interface RuntimeEntries {
   cliEntry: string
   webEntry: string
+  sidebarEntry: string
+  sidebarClientEntry: string
+  sidebarEditorEntry: string
+  sidebarTerminalEntry: string
+  sidebarPatchEntry: string
 }
 
 function canonicalPath(path: string): string | undefined {
@@ -149,7 +154,33 @@ export function verifyRuntime(root: string): RuntimeEntries {
     throw new Error(`Harness Web UI is missing beneath: ${nodeModules}`)
   }
 
-  return { cliEntry, webEntry }
+  const sidebarRoot = join(nodeModules, 'dsh-better-sidebar')
+  const sidebarEntry = join(sidebarRoot, 'lib', 'index.js')
+  const sidebarClientEntry = join(sidebarRoot, 'lib', 'client-registry.js')
+  const sidebarEditorEntry = join(sidebarRoot, 'lib', 'client-editor.js')
+  const sidebarTerminalEntry = join(sidebarRoot, 'lib', 'client-terminal.js')
+  const sidebarPatchEntry = join(sidebarRoot, 'cordis.patch.yml')
+  for (const artifact of [
+    sidebarEntry,
+    sidebarClientEntry,
+    sidebarEditorEntry,
+    sidebarTerminalEntry,
+    sidebarPatchEntry,
+  ]) {
+    if (!isFileWithinBoundary(artifact, nodeModules, realNodeModules)) {
+      throw new Error(`Better Sidebar artifact is missing: ${artifact}`)
+    }
+  }
+
+  return {
+    cliEntry,
+    webEntry,
+    sidebarEntry,
+    sidebarClientEntry,
+    sidebarEditorEntry,
+    sidebarTerminalEntry,
+    sidebarPatchEntry,
+  }
 }
 
 function isProcessEntry(): boolean {
@@ -162,4 +193,8 @@ if (isProcessEntry()) {
   const entries = verifyRuntime(runtimeRoot)
   console.log(`Harness CLI: ${entries.cliEntry}`)
   console.log(`Harness Web UI: ${entries.webEntry}`)
+  console.log(`Better Sidebar host: ${entries.sidebarEntry}`)
+  console.log(`Better Sidebar client: ${entries.sidebarClientEntry}`)
+  console.log(`Better Sidebar editor: ${entries.sidebarEditorEntry}`)
+  console.log(`Better Sidebar terminal: ${entries.sidebarTerminalEntry}`)
 }

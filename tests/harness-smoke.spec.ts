@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { resolveHostPaths } from '../src/host/paths.ts'
+import { prepareDesktopProfile } from '../src/host/desktop-profile.ts'
 import {
   createHostSupervisor,
   spawnDshWeb,
@@ -29,7 +30,7 @@ describe.runIf(process.env.DSH_RUN_HARNESS_SMOKE === '1')('real Harness Host', (
     }
   })
 
-  it('serves the official Web document', async () => {
+  it('serves the official Web document with Better Sidebar routes', async () => {
     if (temporaryHome === undefined) {
       throw new Error('Harness smoke temporary home was not created')
     }
@@ -43,6 +44,7 @@ describe.runIf(process.env.DSH_RUN_HARNESS_SMOKE === '1')('real Harness Host', (
       homePath: temporaryHome,
       env,
     })
+    prepareDesktopProfile(paths)
     host = createHostSupervisor({
       ...paths,
       env,
@@ -53,5 +55,16 @@ describe.runIf(process.env.DSH_RUN_HARNESS_SMOKE === '1')('real Harness Host', (
     const response = await fetch(origin)
     expect(response.ok).toBe(true)
     expect(await response.text()).toContain('<div id="root">')
+
+    const sidebarResponse = await fetch(`${origin}/sidebar/api/does-not-exist`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{}',
+    })
+    expect(sidebarResponse.status).toBe(404)
+    expect(await sidebarResponse.json()).toMatchObject({
+      ok: false,
+      error: { message: expect.stringContaining('unknown sidebar API method') },
+    })
   }, 120_000)
 })

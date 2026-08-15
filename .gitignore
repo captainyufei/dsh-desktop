@@ -6,3 +6,8 @@ build/generated/
 coverage/
 .worktrees/
 .superpowers/
+.playwright-mcp/
+.DS_Store
+.tmp-*
+.vercel/
+dsh-fluid-v*.png

@@ -1,0 +1,110 @@
+diff --git a/lib/client.js b/lib/client.js
+index 71247b471b598db48492265d0dc0a936e4c706b5..5a5ec26c8cc74c2c06a45821d532871499883ae7 100644
+--- a/lib/client.js
++++ b/lib/client.js
+@@ -688,6 +688,7 @@ window.__ModuleLoader__.load({
+ 			return next;
+ 		}
+ 		const STORAGE_PREFIX = "dsh-sidebar:v1";
++		const DRAFT_SESSION_ID = "__dsh_better_sidebar_draft__";
+ 		/** Default panel width for one viewport: the prefs percent of the window,
+ 		* clamped to the panel floor (a tiny percent must stay usable) and to the
+ 		* viewport (a large one must never cover the whole window). */
+@@ -705,6 +706,7 @@ window.__ModuleLoader__.load({
+ 				}
+ 			} catch {}
+ 			const viewport = typeof window !== "undefined" ? window.innerWidth : void 0;
++			if (sessionId === DRAFT_SESSION_ID) return makeDefaultState(viewport === void 0 ? 400 : defaultWidthFor(viewport, prefs.defaultWidthPercent), false, prefs.tabsEnabled["explorer"] !== false);
+ 			return makeDefaultState(viewport === void 0 ? 400 : defaultWidthFor(viewport, prefs.defaultWidthPercent), prefs.openByDefault && (viewport === void 0 || !isNarrowWidth(viewport)), prefs.tabsEnabled["explorer"] !== false);
+ 		}
+ 		/**
+@@ -6813,7 +6815,7 @@ window.__ModuleLoader__.load({
+ 			const current = sessionList.current;
+ 			const snapshot = (0, react.useSyncExternalStore)((0, react.useCallback)((callback) => store.subscribe(callback), [store]), (0, react.useCallback)(() => store.getSnapshot(), [store]));
+ 			(0, react.useEffect)(() => {
+-				store.setSession(current);
++				store.setSession(current ?? DRAFT_SESSION_ID);
+ 			}, [current, store]);
+ 			const state = snapshot.state;
+ 			const sessionId = snapshot.sessionId;
+@@ -7080,7 +7082,7 @@ window.__ModuleLoader__.load({
+ 			*/
+ 			const bottomWasOpenRef = (0, react.useRef)(void 0);
+ 			(0, react.useEffect)(() => {
+-				if (narrow) return;
++				if (narrow || current === void 0) return;
+ 				if (state === void 0) return;
+ 				const wasOpen = bottomWasOpenRef.current;
+ 				bottomWasOpenRef.current = state.bottomOpen;
+@@ -7098,7 +7100,8 @@ window.__ModuleLoader__.load({
+ 				state,
+ 				store,
+ 				ctx,
+-				narrow
++				narrow,
++				current
+ 			]);
+ 			const panelRef = (0, react.useRef)(null);
+ 			const bottomRef = (0, react.useRef)(null);
+diff --git a/src/client/Sidebar.tsx b/src/client/Sidebar.tsx
+index c450a36bc5f952c0c9fb1e9e602d4c356c5032c8..eed611fd5df9c3b504062f66d4c61871b5962755 100644
+--- a/src/client/Sidebar.tsx
++++ b/src/client/Sidebar.tsx
+@@ -32,7 +32,7 @@ import { IconCloseFill14, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
+ import type { Context, SidebarSessionList } from '../context-types.ts'
+ import { appendToDraft } from './conversation-draft.ts'
+ import {
+-  BOTTOM_MIN, PANEL_MIN, agentUuidOf, firstLeaf, isAgentTabId, leafWithTab, migrateBottomTabs, moveTab, moveTabToEdge, openDiffTab,
++  BOTTOM_MIN, DRAFT_SESSION_ID, PANEL_MIN, agentUuidOf, firstLeaf, isAgentTabId, leafWithTab, migrateBottomTabs, moveTab, moveTabToEdge, openDiffTab,
+   reconcileAgentTerminals,
+   resizeSplitIn, setBottomHeight, setWidth, toggleBottomPanel, toggleExpanded, togglePanel,
+   type DropZone, type SidebarState, type SidebarStore, type SidebarTab, type SplitNode,
+@@ -149,7 +149,7 @@ export function Sidebar(props: { ctx: Context; store: SidebarStore }) {
+     useCallback((callback: () => void) => store.subscribe(callback), [store]),
+     useCallback(() => store.getSnapshot(), [store]),
+   )
+-  useEffect(() => { store.setSession(current) }, [current, store])
++  useEffect(() => { store.setSession(current ?? DRAFT_SESSION_ID) }, [current, store])
+ 
+   const state = snapshot.state
+   const sessionId = snapshot.sessionId
+@@ -439,7 +439,7 @@ export function Sidebar(props: { ctx: Context; store: SidebarStore }) {
+     // The bottom panel does not exist on narrow viewports (the two
+     // workbenches merge into one panel), so the first-expansion auto
+     // terminal is a desktop-only behavior.
+-    if (narrow) return
++    if (narrow || current === undefined) return
+     if (state === undefined) return
+     const wasOpen = bottomWasOpenRef.current
+     bottomWasOpenRef.current = state.bottomOpen
+@@ -451,7 +451,7 @@ export function Sidebar(props: { ctx: Context; store: SidebarStore }) {
+     // atomically so later expansions never repeat the auto-open.
+     store.reduce(s => ({ ...s, activePane: firstLeaf(s.bottomSplits).id, bottomOpenedOnce: true }))
+     ctx.betterSidebar?.openTab({ type: 'terminal' })
+-  }, [state, store, ctx, narrow])
++  }, [state, store, ctx, narrow, current])
+ 
+   // Panel drags: the right panel's width (left edge strip), the bottom
+   // panel's height (top edge strip), and the shared corner (both at once).
+diff --git a/src/client/state.ts b/src/client/state.ts
+index 8656ddcd9be1250dc4b04276fbc600689c66e292..11d105ee48461ff9240bca4f6950d030b46c34a1 100644
+--- a/src/client/state.ts
++++ b/src/client/state.ts
+@@ -727,6 +727,7 @@ export function reconcileAgentTerminals(
+ // ── The per-session store ──────────────────────────────────────────────────
+ 
+ const STORAGE_PREFIX = 'dsh-sidebar:v1'
++export const DRAFT_SESSION_ID = '__dsh_better_sidebar_draft__'
+ 
+ /** Immutable snapshot handed to React (replaced only on real changes). */
+ export interface SidebarSnapshot {
+@@ -775,6 +776,9 @@ function loadState(sessionId: string, prefs: SidebarPrefs): SidebarState {
+   const width = viewport === undefined
+     ? PANEL_DEFAULT
+     : defaultWidthFor(viewport, prefs.defaultWidthPercent)
++  if (sessionId === DRAFT_SESSION_ID) {
++    return makeDefaultState(width, false, prefs.tabsEnabled['explorer'] !== false)
++  }
+   const openByDefault = prefs.openByDefault && (viewport === undefined || !isNarrowWidth(viewport))
+   return makeDefaultState(width, openByDefault, prefs.tabsEnabled['explorer'] !== false)
+ }

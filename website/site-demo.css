@@ -1,0 +1,759 @@
+/*
+ * DSH Desktop landing demo adapter.
+ *
+ * This sheet deliberately mirrors the product sources instead of treating the
+ * workbench as a hand-drawn mock:
+ *   - DeepSeek Harness ui-sidebar / SidebarRoot.module.css
+ *   - DeepSeek Harness ui-conversation / InputBar.module.css
+ *   - dsh-better-sidebar / sidebar.module.css + icons.tsx
+ *
+ * The source components use fixed CSS pixels in a 1920px logical window. The
+ * landing component uses cqw (1 cqw = 19.2 source px) so the same geometry
+ * scales as one unit without making the surrounding page an iframe.
+ */
+
+.dsh-app-demo .dsh-new-chat {
+  width: calc(100% - 0.2083cqw);
+  height: 1.9792cqw;
+  gap: 0.3125cqw;
+  margin: 0 0.1042cqw 0.4167cqw;
+  padding: 0.4167cqw 0.8333cqw;
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 0.625cqw;
+  background: #43454a;
+  color: #f9fafb !important;
+  font-size: 0.7292cqw !important;
+  font-weight: 500 !important;
+  line-height: 1.1458cqw;
+  overflow: hidden;
+}
+
+.dsh-app-demo .dsh-new-chat:hover {
+  background: #353638;
+}
+
+.dsh-app-demo .dsh-new-chat > span {
+  min-width: 0;
+  overflow: hidden;
+  font-size: inherit;
+  line-height: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dsh-app-demo .dsh-new-chat > svg {
+  width: 0.7292cqw;
+  height: 0.7292cqw;
+}
+
+.dsh-app-demo .dsh-new-chat > svg path,
+.dsh-app-demo .dsh-add-tab svg path,
+.dsh-app-demo .dsh-composer-add svg path,
+.dsh-app-demo .dsh-composer-send svg path {
+  fill: currentColor;
+  stroke: none;
+}
+
+/* SidebarRoot source geometry: the expanded toggle owns a 28px circle at
+   the logo row's trailing edge. The collapsed 56px rail seats a 36px box at
+   x=10; its resting whale swaps to the panel glyph on hover. */
+.dsh-app-demo .dsh-sidebar-toggle .dsh-panel-left-icon path {
+  fill: currentColor;
+  stroke: none;
+}
+
+.dsh-app-demo .dsh-sidebar-toggle .dsh-rail-fish {
+  display: none;
+  width: 1.25cqw;
+  height: 1.25cqw;
+  object-fit: contain;
+  filter: drop-shadow(0 0 0.32cqw rgba(88, 166, 255, 0.34));
+}
+
+.dsh-app-demo[data-sidebar-collapsed="true"] .dsh-demo-sidebar {
+  padding-right: 0.5208cqw;
+  padding-left: 0.5208cqw;
+}
+
+.dsh-app-demo[data-sidebar-collapsed="true"] .dsh-demo-shell {
+  --dsh-sidebar-width: 2.9167%;
+}
+
+.dsh-app-demo[data-sidebar-collapsed="true"] .dsh-demo-brand-row {
+  justify-content: flex-start;
+}
+
+.dsh-app-demo[data-sidebar-collapsed="true"] .dsh-sidebar-toggle {
+  width: 1.875cqw;
+  height: 1.875cqw;
+  color: var(--dsh-label) !important;
+}
+
+.dsh-app-demo[data-sidebar-collapsed="true"] .dsh-sidebar-toggle .dsh-rail-fish {
+  display: block;
+}
+
+.dsh-app-demo[data-sidebar-collapsed="true"] .dsh-sidebar-toggle .dsh-panel-left-icon {
+  display: none;
+  width: 0.9375cqw;
+  height: 0.9375cqw;
+}
+
+.dsh-app-demo[data-sidebar-collapsed="true"] .dsh-sidebar-toggle:hover .dsh-rail-fish {
+  display: none;
+}
+
+.dsh-app-demo[data-sidebar-collapsed="true"] .dsh-sidebar-toggle:hover .dsh-panel-left-icon {
+  display: block;
+}
+
+/* Official InputBar: 780px card, 22px radius, 10px text inset, 12px gap,
+   then a 42px tool row. In the 1208px conversation column the card is
+   centered, not stretched to an arbitrary percentage of the column. */
+.dsh-app-demo .dsh-composer {
+  right: auto;
+  left: 50%;
+  bottom: 1.7708cqw;
+  display: flex;
+  width: min(40.625cqw, calc(100% - 1.6667cqw));
+  min-height: 4.7917cqw;
+  flex-direction: column;
+  gap: 0.625cqw;
+  padding: 0.5208cqw 0 0;
+  box-sizing: border-box;
+  color: #81858c;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 1.1458cqw;
+  background: #2c2c2e;
+  box-shadow: 0 0.2083cqw 0.625cqw rgba(0, 0, 0, 0.02), 0 0.1042cqw 0.4167cqw rgba(0, 0, 0, 0.04);
+  transform: translateX(-50%);
+}
+
+.dsh-app-demo .dsh-composer textarea {
+  display: block;
+  width: 100%;
+  height: 1.4583cqw;
+  min-height: 1.4583cqw;
+  resize: none;
+  overflow: hidden;
+  padding: 0.2083cqw 0.625cqw 0 0.8333cqw;
+  box-sizing: border-box;
+  color: #f9fafb;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 0.8333cqw;
+  line-height: 1.25cqw;
+}
+
+.dsh-app-demo .dsh-composer textarea::placeholder {
+  color: #81858c;
+}
+
+.dsh-app-demo .dsh-composer-controls {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  height: 2.1875cqw;
+  align-items: center;
+  gap: 0.625cqw;
+  padding: 0.1042cqw 0.4167cqw 0.3125cqw;
+  box-sizing: border-box;
+  font-size: 0.6771cqw;
+  line-height: 1.0417cqw;
+}
+
+.dsh-app-demo .dsh-composer-controls button {
+  display: inline-flex;
+  width: auto;
+  height: 1.4583cqw;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2083cqw;
+  padding: 0 0.4167cqw;
+  color: #cfd3d6;
+  border: 0;
+  border-radius: 1.25cqw;
+  background: transparent;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.dsh-app-demo .dsh-composer-controls button:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.dsh-app-demo .dsh-composer-controls .dsh-composer-add {
+  width: 1.4583cqw;
+  flex: none;
+  padding: 0;
+  border-radius: 999px;
+  background: #353638;
+}
+
+.dsh-app-demo .dsh-composer-add > svg,
+.dsh-app-demo .dsh-permission > svg:first-child {
+  width: 0.7292cqw;
+  height: 0.7292cqw;
+}
+
+.dsh-app-demo .dsh-permission {
+  max-width: 11.4583cqw;
+  min-width: 0;
+}
+
+.dsh-app-demo .dsh-permission > span,
+.dsh-app-demo .dsh-demo-model > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dsh-app-demo .dsh-demo-model {
+  max-width: 11.4583cqw;
+  min-width: 0;
+  margin-left: auto;
+}
+
+.dsh-app-demo .dsh-chevron-down {
+  width: 0.625cqw;
+  height: 0.625cqw;
+  color: #81858c;
+}
+
+.dsh-app-demo .dsh-model-status {
+  width: 0.8333cqw;
+  height: 0.8333cqw;
+  flex: none;
+  border: 0.1042cqw solid #686b70;
+  border-top-color: #cfd3d6;
+  border-radius: 50%;
+}
+
+.dsh-app-demo .dsh-composer-controls .dsh-composer-send {
+  width: 1.7708cqw;
+  height: 1.7708cqw;
+  flex: none;
+  padding: 0;
+  color: #fff;
+  border-radius: 999px;
+  background: #679efe;
+  transform: translateY(-0.1042cqw);
+}
+
+.dsh-app-demo .dsh-composer-send > svg {
+  width: 0.8333cqw;
+  height: 0.8333cqw;
+}
+
+/* Workbench TabBar + persistent panel toggle cluster, mapped directly from
+   dsh-better-sidebar's 34px strip / 28px round buttons / 4px gap. */
+.dsh-app-demo .dsh-workbench-tabs {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 1.7708cqw;
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 0 4.1667cqw 0 0;
+  box-sizing: border-box;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: #232324;
+  font-size: 0.625cqw;
+  line-height: 0.9375cqw;
+}
+
+.dsh-app-demo .dsh-tab-list {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: stretch;
+  overflow: hidden;
+}
+
+.dsh-app-demo .dsh-tab-list > button.active {
+  display: flex;
+  min-width: 3.3333cqw;
+  max-width: 8.3333cqw;
+  height: 100%;
+  flex: none;
+  align-items: center;
+  gap: 0.2083cqw;
+  padding: 0 0.2083cqw 0 0.5208cqw;
+  color: #f9fafb;
+  border: 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 0;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: inherit;
+}
+
+.dsh-app-demo .dsh-tab-list > button.active > svg {
+  width: 0.7292cqw;
+  height: 0.7292cqw;
+}
+
+.dsh-app-demo .dsh-tab-title {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dsh-app-demo .dsh-tab-close {
+  display: inline-flex;
+  width: 0.9375cqw;
+  height: 0.9375cqw;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  color: #adb2b8;
+  border-radius: 0.2083cqw;
+  font-size: 0.7292cqw;
+}
+
+.dsh-app-demo .dsh-tab-list > .dsh-add-tab {
+  display: inline-flex;
+  width: 1.1458cqw;
+  height: 1.1458cqw;
+  flex: none;
+  align-self: center;
+  align-items: center;
+  justify-content: center;
+  margin: 0 0.3125cqw;
+  padding: 0;
+  color: #adb2b8;
+  border: 0;
+  border-radius: 0.2604cqw;
+  background: #232324;
+}
+
+.dsh-app-demo .dsh-tab-list > .dsh-add-tab:hover {
+  color: #f9fafb;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.dsh-app-demo .dsh-add-tab > svg {
+  width: 0.8333cqw;
+  height: 0.8333cqw;
+}
+
+.dsh-app-demo .dsh-panel-toggles {
+  position: absolute;
+  top: 0.0521cqw;
+  right: 0.4167cqw;
+  z-index: 3;
+  display: flex;
+  flex-direction: row;
+  gap: 0.2083cqw;
+}
+
+.dsh-app-demo .dsh-panel-toggles button {
+  display: flex;
+  width: 1.6667cqw;
+  height: 1.6667cqw;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: #cfd3d6;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.dsh-app-demo .dsh-panel-toggles button:hover {
+  color: #f9fafb;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.dsh-app-demo .dsh-panel-toggles svg {
+  width: 0.9375cqw;
+  height: 0.9375cqw;
+}
+
+.dsh-app-demo .dsh-panel-toggles svg > rect:first-child {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+.dsh-app-demo .dsh-panel-toggles .dsh-panel-rail {
+  fill: currentColor;
+  stroke: none;
+}
+
+/* The source keeps this cluster outside the right panel. It therefore stays
+   pinned to the app window while that panel slides to width zero. */
+.dsh-app-demo .dsh-demo-shell {
+  position: relative;
+}
+
+.dsh-app-demo .dsh-demo-shell > .dsh-panel-toggles {
+  top: 0.0521cqw;
+  right: 0.4167cqw;
+  z-index: 35;
+  pointer-events: auto;
+}
+
+.dsh-app-demo[data-explorer-collapsed="true"] .dsh-demo-explorer {
+  visibility: hidden;
+  overflow: hidden;
+  opacity: 0;
+}
+
+.dsh-app-demo[data-explorer-collapsed="true"] .dsh-session-log {
+  right: 4.375cqw;
+}
+
+/* TrajectoryView is not a checklist. The product source is a 32px sticky
+   toolbar, a 50px three-lane network timeline, then a 30px-row event ledger. */
+.dsh-app-demo .dsh-trace-view {
+  display: none !important;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+  color: var(--dsh-label);
+  background: var(--dsh-layer-1);
+}
+
+.dsh-app-demo[data-demo-view="trace"] .dsh-trace-view {
+  display: flex !important;
+}
+
+.dsh-app-demo .dsh-trace-toolbar {
+  z-index: 4;
+  display: flex;
+  width: 100%;
+  height: 1.6667cqw;
+  flex: none;
+  align-items: center;
+  gap: 0.4167cqw;
+  padding: 0 0.3125cqw;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--dsh-line);
+  background: var(--dsh-layer-1);
+}
+
+.dsh-app-demo .dsh-trace-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 0.1042cqw;
+}
+
+.dsh-app-demo .dsh-trace-actions button {
+  display: inline-flex;
+  width: auto;
+  height: 1.0417cqw;
+  align-items: center;
+  gap: 0.2083cqw;
+  padding: 0 0.2604cqw;
+  color: var(--dsh-tertiary);
+  border: 0;
+  border-radius: 0.1563cqw;
+  background: transparent;
+  font-size: 0.625cqw;
+  line-height: 1.0417cqw;
+}
+
+.dsh-app-demo .dsh-trace-actions button:first-child {
+  padding-right: 0.3646cqw;
+  padding-left: 0.3646cqw;
+}
+
+.dsh-app-demo .dsh-trace-actions button:hover,
+.dsh-app-demo .dsh-trace-actions button[aria-pressed="true"] {
+  color: var(--dsh-label);
+  background: var(--dsh-hover);
+}
+
+.dsh-app-demo .dsh-trace-actions button > svg {
+  width: 0.625cqw;
+  height: 0.625cqw;
+}
+
+.dsh-app-demo .dsh-trace-actions button > span:first-child:not(:last-child) {
+  color: var(--dsh-tertiary);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.7292cqw;
+  line-height: 0.7292cqw;
+}
+
+.dsh-app-demo .dsh-trace-search {
+  display: flex;
+  width: 8.5417cqw;
+  min-width: 4.375cqw;
+  height: 1.1458cqw;
+  align-items: center;
+  gap: 0.2083cqw;
+  margin-left: auto;
+  padding: 0 0.3125cqw;
+  box-sizing: border-box;
+  color: var(--dsh-muted);
+  border: 1px solid var(--dsh-line);
+  border-radius: 0.2083cqw;
+  background: var(--dsh-layer-2);
+}
+
+.dsh-app-demo .dsh-trace-search:focus-within {
+  border-color: var(--dsh-blue);
+  background: var(--dsh-layer-1);
+}
+
+.dsh-app-demo .dsh-trace-search > svg {
+  width: 0.5729cqw;
+  height: 0.5729cqw;
+}
+
+.dsh-app-demo .dsh-trace-search > input {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  color: var(--dsh-label);
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: 0.625cqw;
+}
+
+.dsh-app-demo .dsh-trace-search > input::placeholder {
+  color: var(--dsh-muted);
+}
+
+.dsh-app-demo .dsh-trace-timeline {
+  display: grid;
+  height: 2.6042cqw;
+  flex: none;
+  grid-template-columns: 2.2917cqw minmax(0, 1fr);
+  overflow: hidden;
+  border-bottom: 1px solid var(--dsh-line);
+  background: var(--dsh-layer-2);
+  user-select: none;
+}
+
+.dsh-app-demo .dsh-trace-lane-labels {
+  position: relative;
+  color: var(--dsh-muted);
+  border-right: 1px solid var(--dsh-line-thin);
+  font-size: 0.5208cqw;
+  line-height: 1;
+}
+
+.dsh-app-demo .dsh-trace-lane-labels span {
+  position: absolute;
+  right: 0.1563cqw;
+  display: flex;
+  height: 0.4167cqw;
+  align-items: center;
+}
+
+.dsh-app-demo .dsh-trace-lane-labels span:nth-child(1) { top: 0.3646cqw; }
+.dsh-app-demo .dsh-trace-lane-labels span:nth-child(2) { top: 1.0938cqw; }
+.dsh-app-demo .dsh-trace-lane-labels span:nth-child(3) { top: 1.8229cqw; }
+
+.dsh-app-demo .dsh-trace-track {
+  position: relative;
+  overflow: hidden;
+  outline: 0;
+  cursor: crosshair;
+}
+
+.dsh-app-demo .dsh-trace-track:focus-visible {
+  box-shadow: inset 0 0 0 1px var(--dsh-blue);
+}
+
+.dsh-app-demo .dsh-trace-gridline {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--line);
+  width: 1px;
+  background: var(--dsh-line-thin);
+}
+
+.dsh-app-demo [data-demo-trace-span] {
+  position: absolute;
+  z-index: 2;
+  top: calc(0.3646cqw + var(--lane) * 0.7292cqw);
+  left: var(--start);
+  width: max(0.1042cqw, var(--width));
+  height: 0.4167cqw;
+  padding: 0;
+  border: 0;
+  border-radius: 0.0521cqw;
+  background: var(--dsh-secondary);
+  opacity: 0.78;
+  transition: opacity 120ms ease, box-shadow 120ms ease, width 180ms ease, left 180ms ease;
+}
+
+.dsh-app-demo [data-demo-trace-span][data-kind="user"] { background: var(--dsh-blue); }
+.dsh-app-demo [data-demo-trace-span][data-kind="assistant"] { background: #d8709d; opacity: 1; }
+.dsh-app-demo [data-demo-trace-span][data-kind="tool"],
+.dsh-app-demo [data-demo-trace-span][data-kind="result"] { background: #d6aa5d; opacity: 1; }
+.dsh-app-demo [data-demo-trace-span]:hover,
+.dsh-app-demo [data-demo-trace-span][aria-pressed="true"] { opacity: 1; box-shadow: 0 0 0 0.1042cqw var(--dsh-blue); }
+
+.dsh-app-demo .dsh-trace-timeline[data-actual-duration="true"] [data-demo-trace-span="system"] { --width: 4%; }
+.dsh-app-demo .dsh-trace-timeline[data-actual-duration="true"] [data-demo-trace-span="user"] { --start: 7%; --width: 3%; }
+.dsh-app-demo .dsh-trace-timeline[data-actual-duration="true"] [data-demo-trace-span="assistant"] { --start: 13%; --width: 53%; }
+.dsh-app-demo .dsh-trace-timeline[data-actual-duration="true"] [data-demo-trace-span="tool"] { --start: 38%; --width: 8%; }
+.dsh-app-demo .dsh-trace-timeline[data-actual-duration="true"] [data-demo-trace-span="result"] { --start: 47%; --width: 3%; }
+.dsh-app-demo .dsh-trace-timeline[data-actual-duration="true"] [data-demo-trace-span="final"] { --start: 69%; --width: 29%; }
+
+.dsh-app-demo .dsh-trace-cursor {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  bottom: 0;
+  left: 76%;
+  width: 1px;
+  background: rgba(103, 158, 254, 0.55);
+  pointer-events: none;
+}
+
+.dsh-app-demo .dsh-trace-ledger {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  scrollbar-width: none;
+  background: var(--dsh-layer-1);
+}
+
+.dsh-app-demo .dsh-trace-ledger table {
+  width: 100%;
+  border-spacing: 0;
+  table-layout: fixed;
+  color: var(--dsh-label);
+  background: var(--dsh-layer-1);
+  font-size: 0.625cqw;
+}
+
+.dsh-app-demo .dsh-trace-event-column { width: 6.3542cqw; }
+
+.dsh-app-demo .dsh-trace-ledger th {
+  height: 1.5625cqw;
+  padding: 0 0.4167cqw;
+  color: var(--dsh-tertiary);
+  border-bottom: 1px solid var(--dsh-line);
+  background: var(--dsh-sidebar);
+  font-weight: 500;
+  text-align: left;
+}
+
+.dsh-app-demo .dsh-trace-ledger td {
+  height: 1.5625cqw;
+  padding: 0 0.4167cqw;
+  overflow: hidden;
+  color: var(--dsh-secondary);
+  border-bottom: 1px solid var(--dsh-line-thin);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dsh-app-demo .dsh-trace-ledger tbody tr {
+  transition: background-color 120ms ease, opacity 120ms ease;
+}
+
+.dsh-app-demo .dsh-trace-ledger tbody tr:not(.dsh-trace-empty-row):hover,
+.dsh-app-demo .dsh-trace-ledger tbody tr[data-selected="true"] {
+  background: var(--dsh-hover);
+}
+
+.dsh-app-demo .dsh-trace-ledger td:first-child {
+  position: relative;
+  padding-left: 1.3542cqw;
+}
+
+.dsh-app-demo .dsh-trace-ledger td:first-child b {
+  color: var(--dsh-tertiary);
+  font-size: 0.5208cqw;
+  font-weight: 600;
+  letter-spacing: 0.035em;
+}
+
+.dsh-app-demo .dsh-trace-ledger td:first-child time {
+  float: right;
+  color: var(--dsh-muted);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.5208cqw;
+}
+
+.dsh-app-demo .dsh-trace-rail {
+  position: absolute;
+  top: 0;
+  bottom: -1px;
+  left: 0.625cqw;
+  width: 1px;
+  background: var(--dsh-line);
+}
+
+.dsh-app-demo .dsh-trace-rail::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0.2604cqw;
+  height: 0.2604cqw;
+  border-radius: 50%;
+  background: var(--dsh-tertiary);
+  box-shadow: 0 0 0 0.1042cqw var(--dsh-layer-1);
+  content: "";
+  transform: translate(-50%, -50%);
+}
+
+.dsh-app-demo .dsh-trace-ledger tr[data-trace-row="user"] .dsh-trace-rail::after { background: var(--dsh-blue); }
+.dsh-app-demo .dsh-trace-ledger tr[data-trace-row="assistant"] .dsh-trace-rail::after,
+.dsh-app-demo .dsh-trace-ledger tr[data-trace-row="final"] .dsh-trace-rail::after { background: #d8709d; }
+.dsh-app-demo .dsh-trace-ledger tr[data-trace-row="tool"] .dsh-trace-rail::after,
+.dsh-app-demo .dsh-trace-ledger tr[data-trace-row="result"] .dsh-trace-rail::after { background: #d6aa5d; }
+
+.dsh-app-demo .dsh-trace-empty-row td {
+  height: 3.125cqw;
+  padding: 0;
+  color: var(--dsh-muted);
+  text-align: center;
+}
+
+.dsh-app-demo .dsh-trace-ledger tr[hidden],
+.dsh-app-demo .dsh-trace-view[data-turns-collapsed="true"] .dsh-turn-detail,
+.dsh-app-demo .dsh-trace-view[data-calls-collapsed="true"] .dsh-call-detail {
+  display: none;
+}
+
+/* The official page moves its canvas light field; its product chrome stays
+   registered. Keep the demo window stable and let the hero canvas carry the
+   pointer response. */
+.product-stage {
+  container: dsh-product-stage / inline-size;
+}
+
+.product-stage .app-window.dsh-app-demo {
+  border-radius: 0.8333cqw;
+  transform: none !important;
+  transition: border-color 180ms ease, box-shadow 240ms ease;
+  will-change: auto;
+}
+
+.product-stage .app-window.dsh-app-demo > .dsh-demo-shell {
+  border-radius: inherit;
+}
+
+.product-stage:hover .app-window.dsh-app-demo {
+  border-color: rgba(255, 255, 255, 0.24);
+  box-shadow: 0 4cqw 9cqw rgba(0, 0, 0, 0.56), 0 0 0 0.45cqw rgba(103, 158, 254, 0.055);
+}
+
+.dsh-app-demo[data-demo-theme="light"] .dsh-composer {
+  color: #adb2b8;
+  border-color: rgba(0, 0, 0, 0.1);
+  background: #fff;
+}
+
+.dsh-app-demo[data-demo-theme="light"] .dsh-workbench-tabs,
+.dsh-app-demo[data-demo-theme="light"] .dsh-tab-list > .dsh-add-tab {
+  background: #fff;
+}

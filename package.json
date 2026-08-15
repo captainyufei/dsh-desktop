@@ -12,6 +12,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:smoke": "cross-env DSH_RUN_HARNESS_SMOKE=1 vitest run tests/harness-smoke.spec.ts",
+    "site:dev": "node scripts/serve-site.mjs",
+    "icons": "node scripts/generate-brand-icons.mjs",
     "licenses:inventory": "pnpm licenses list --prod --json",
     "stage:legal": "node --import tsx scripts/stage-legal-resources.ts",
     "verify:package-legal": "node --import tsx scripts/verify-packaged-legal-resources.ts",
@@ -24,7 +26,8 @@
     "dist:win:x64": "node --import tsx scripts/verify-release-target.ts win32 x64 && pnpm build && pnpm stage:runtime && pnpm verify:runtime && pnpm stage:legal && electron-builder --win nsis --x64 && pnpm verify:package-legal -- win32 x64"
   },
   "dependencies": {
-    "@deepseek-ai/dsh": "0.1.0-rc.6"
+    "@deepseek-ai/dsh": "0.1.0-rc.6",
+    "dsh-better-sidebar": "github:omdsh-dev/DSH-better-sidebar#5d2d6e580143dc6ad95c015feb2909ec60afdf77"
   },
   "devDependencies": {
     "@types/node": "26.2.0",
@@ -40,6 +43,7 @@
     "appId": "com.community.dsh-desktop",
     "productName": "DSH Desktop",
     "icon": "build/icon.png",
+    "compression": "normal",
     "beforeBuild": "./scripts/electron-builder-hooks.cjs",
     "asar": true,
     "files": ["lib/**", "package.json"],

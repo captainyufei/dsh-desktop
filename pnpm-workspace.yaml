@@ -1,4 +1,10 @@
-injectWorkspacePackages: true
-
 packages:
   - .
+
+injectWorkspacePackages: true
+
+onlyBuiltDependencies:
+  - dsh-better-sidebar
+
+patchedDependencies:
+  dsh-better-sidebar@0.12.2: patches/dsh-better-sidebar@0.12.2.patch

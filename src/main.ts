@@ -11,9 +11,11 @@ import {
   Tray,
 } from 'electron'
 import { APP_ID, APP_NAME } from './app-metadata.ts'
+import { applicationMenuTemplate } from './application-menu.ts'
 import { runCleanupStages } from './cleanup.ts'
 import { createDiagnostics } from './diagnostics.ts'
 import { assertRuntimeArtifacts, resolveHostPaths, type HostPaths } from './host/paths.ts'
+import { prepareDesktopProfile } from './host/desktop-profile.ts'
 import {
   createHostSupervisor,
   formatStartupErrorForDialog,
@@ -150,6 +152,13 @@ function startApplication(): void {
     shell.showItemInFolder(diagnostics.path)
   }
 
+  const installApplicationMenu = (): void => {
+    const template = applicationMenuTemplate(process.platform, { openLogs })
+    if (template.length > 0) {
+      Menu.setApplicationMenu(Menu.buildFromTemplate(template))
+    }
+  }
+
   const showStartupRecovery = async (
     error: unknown,
     ticket?: RecoveryTicket,
@@ -275,6 +284,14 @@ function startApplication(): void {
     })
     mainWindow = window
     mainWindowReady = false
+
+    if (process.platform === 'win32') {
+      // Keep Windows chrome native. Explicitly showing the menu avoids an
+      // Electron/Windows race where a restored window can retain the hidden
+      // menu-bar state from a previous launch even with autoHideMenuBar=false.
+      window.setAutoHideMenuBar(false)
+      window.setMenuBarVisibility(true)
+    }
 
     window.on('close', (event) => lifecycle.onWindowClose(event))
     window.on('closed', () => {
@@ -540,6 +557,8 @@ function startApplication(): void {
         env: process.env,
       })
       assertRuntimeArtifacts(runtimePaths)
+      prepareDesktopProfile(runtimePaths)
+      installApplicationMenu()
       createTray()
     } catch (error) {
       await showMissingArtifacts(error)

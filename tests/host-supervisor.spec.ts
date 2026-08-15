@@ -101,6 +101,7 @@ function createFixture(
       startupTimeoutMs: 90_000,
       shutdownTimeoutMs: 5_000,
       ...overrides,
+      profileName: overrides.profileName ?? 'dsh-desktop',
     },
   }
 }
