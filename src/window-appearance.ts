@@ -17,9 +17,21 @@ export const MACOS_TITLEBAR_CSS = `
 
 body {
   box-sizing: border-box;
-  padding-top: var(--dsh-desktop-titlebar-height) !important;
+  padding-top: 0 !important;
   background: var(--dsw-alias-bg-base, #fff) !important;
   -webkit-font-smoothing: antialiased;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  top: calc(var(--dsh-desktop-titlebar-height) - 1px);
+  right: 0;
+  left: 0;
+  z-index: 2147483647;
+  height: 1px;
+  pointer-events: none;
+  background: var(--dsw-alias-border-l2, rgba(127, 127, 127, 0.18));
 }
 
 #root {
@@ -28,23 +40,21 @@ body {
 
 #${MACOS_TITLEBAR_ELEMENT_ID} {
   position: fixed;
-  inset: 0 0 auto 0;
+  inset: 0 auto auto 0;
   z-index: 2147483645;
+  width: max(
+    var(--dsh-desktop-titlebar-sidebar-width),
+    var(--dsh-desktop-toolbar-safe-left)
+  );
   height: var(--dsh-desktop-titlebar-height);
-  background: var(--dsh-desktop-titlebar-main-background);
-  box-shadow: inset 0 -1px color-mix(in srgb, currentColor 10%, transparent);
+  background: transparent;
+  box-shadow: none;
   -webkit-app-region: drag;
   user-select: none;
 }
 
 #${MACOS_TITLEBAR_ELEMENT_ID}::before {
-  content: '';
-  position: absolute;
-  inset: 0 auto 0 0;
-  box-sizing: border-box;
-  width: var(--dsh-desktop-titlebar-sidebar-width);
-  background: var(--dsh-desktop-titlebar-sidebar-background);
-  border-right: 1px solid var(--dsh-desktop-titlebar-sidebar-divider);
+  content: none;
 }
 
 #${MACOS_SIDEBAR_TOGGLE_ELEMENT_ID} {
@@ -101,26 +111,43 @@ body {
 }
 
 #root [data-dsh-desktop-main-header] {
-  position: fixed !important;
-  inset: 0 var(--dsh-desktop-details-width) auto max(
-    var(--dsh-desktop-titlebar-sidebar-width),
-    var(--dsh-desktop-toolbar-safe-left)
-  ) !important;
-  z-index: 2147483646 !important;
+  position: relative !important;
+  inset: auto !important;
+  z-index: 1 !important;
   display: grid !important;
   grid-template-columns: minmax(0, max-content) max-content minmax(20px, 1fr) max-content !important;
   grid-template-rows: var(--dsh-desktop-titlebar-height) !important;
   column-gap: 18px !important;
   box-sizing: border-box !important;
-  width: auto !important;
+  flex: 0 0 var(--dsh-desktop-titlebar-height) !important;
+  width: 100% !important;
   height: var(--dsh-desktop-titlebar-height) !important;
   min-height: var(--dsh-desktop-titlebar-height) !important;
-  padding: 0 16px 0 20px !important;
+  padding: 0 16px 0 calc(
+    20px + max(
+      0px,
+      var(--dsh-desktop-toolbar-safe-left) - var(--dsh-desktop-titlebar-sidebar-width)
+    )
+  ) !important;
   overflow: hidden !important;
   background: var(--dsw-alias-bg-base, #fff) !important;
   border: 0 !important;
   box-shadow: none !important;
-  -webkit-app-region: drag;
+  -webkit-app-region: no-drag;
+}
+
+#root [data-dsh-desktop-main-header]::before {
+  content: '' !important;
+  grid-column: 3 !important;
+  grid-row: 1 !important;
+  align-self: stretch !important;
+  min-width: 20px !important;
+  pointer-events: auto !important;
+  -webkit-app-region: drag !important;
+}
+
+#root [data-dsh-desktop-main-header]::after {
+  content: none !important;
 }
 
 #root [data-dsh-desktop-main-title-row] {
@@ -134,6 +161,7 @@ body {
   height: var(--dsh-desktop-titlebar-height) !important;
   gap: 10px !important;
   overflow: hidden !important;
+  -webkit-app-region: drag;
 }
 
 #root [data-dsh-desktop-main-tabs] {
@@ -183,16 +211,19 @@ body {
   -webkit-app-region: no-drag !important;
 }
 
+#root [data-dsh-desktop-sidebar-column],
+#root [data-dsh-desktop-details-column] {
+  box-sizing: border-box !important;
+  padding-top: var(--dsh-desktop-titlebar-height) !important;
+}
+
 #root [data-dsh-desktop-frame-collapsed] {
   grid-template-columns: 0 minmax(0, 1fr) var(--dsh-desktop-details-width) !important;
 }
 
 #root [data-dsh-desktop-frame-collapsed] > [data-dsh-desktop-sidebar-column] {
-  width: 0 !important;
   min-width: 0 !important;
-  max-width: 0 !important;
   overflow: hidden !important;
-  visibility: hidden !important;
   border-right: 0 !important;
   pointer-events: none !important;
 }
@@ -243,6 +274,7 @@ export const MACOS_TITLEBAR_SCRIPT = `
   let detailsColumn = null;
   let sidebarTransition = null;
   let sidebarTransitionTimer = null;
+  let sidebarGeometryFrame = null;
   let updateScheduled = false;
 
   const root = document.getElementById('root');
@@ -270,6 +302,9 @@ export const MACOS_TITLEBAR_SCRIPT = `
   const beginSidebarTransition = (direction) => {
     sidebarTransition = direction;
     document.documentElement.setAttribute('data-dsh-desktop-sidebar-transition', direction);
+    if (sidebarGeometryFrame === null) {
+      sidebarGeometryFrame = window.requestAnimationFrame(trackSidebarGeometry);
+    }
     if (sidebarTransitionTimer !== null) {
       window.clearTimeout(sidebarTransitionTimer);
     }
@@ -278,8 +313,17 @@ export const MACOS_TITLEBAR_SCRIPT = `
       sidebarTransitionTimer = null;
       document.documentElement.removeAttribute('data-dsh-desktop-sidebar-transition');
       scheduleUpdate();
-    }, 260);
+    }, 340);
   };
+
+  function trackSidebarGeometry() {
+    sidebarGeometryFrame = null;
+    syncObservedSidebarWidth();
+    scheduleUpdate();
+    if (sidebarTransition !== null) {
+      sidebarGeometryFrame = window.requestAnimationFrame(trackSidebarGeometry);
+    }
+  }
 
   const syncInterfaceControls = () => {
     const buttons = root === null ? [] : Array.from(root.querySelectorAll('button'));
@@ -352,6 +396,9 @@ export const MACOS_TITLEBAR_SCRIPT = `
     beginSidebarTransition(opening ? 'opening' : 'closing');
     if (opening) {
       shellFrame?.removeAttribute('data-dsh-desktop-frame-collapsed');
+    } else {
+      shellFrame?.setAttribute('data-dsh-desktop-frame-collapsed', '');
+      sidebarColumn?.setAttribute('data-dsh-desktop-sidebar-column', '');
     }
     originalSidebarToggle.click();
     scheduleUpdate();
@@ -409,27 +456,23 @@ export const MACOS_TITLEBAR_SCRIPT = `
 
     if (sidebar === null) {
       if (
-        sidebarTransition === 'opening'
+        sidebarTransition !== null
         && shellFrame?.isConnected === true
         && sidebarColumn?.isConnected === true
       ) {
-        shellFrame.removeAttribute('data-dsh-desktop-frame-collapsed');
+        if (sidebarTransition === 'closing') {
+          shellFrame.setAttribute('data-dsh-desktop-frame-collapsed', '');
+        } else {
+          shellFrame.removeAttribute('data-dsh-desktop-frame-collapsed');
+        }
+        const detailsWidth = getDetailsWidth(shellFrame, detailsColumn);
         document.documentElement.style.setProperty(
           '--dsh-desktop-titlebar-sidebar-width',
           Math.max(0, sidebarColumn.getBoundingClientRect().right) + 'px',
         );
-        compactBrand.hidden = true;
-        return;
-      }
-      if (
-        sidebarTransition === 'closing'
-        && shellFrame?.isConnected === true
-        && sidebarColumn?.isConnected === true
-      ) {
-        shellFrame.removeAttribute('data-dsh-desktop-frame-collapsed');
         document.documentElement.style.setProperty(
-          '--dsh-desktop-titlebar-sidebar-width',
-          Math.max(0, sidebarColumn.getBoundingClientRect().right) + 'px',
+          '--dsh-desktop-details-width',
+          Math.max(0, detailsWidth) + 'px',
         );
         compactBrand.hidden = true;
         return;
@@ -457,6 +500,7 @@ export const MACOS_TITLEBAR_SCRIPT = `
       compactBrand.hidden = true;
       shellFrame?.removeAttribute('data-dsh-desktop-frame-collapsed');
       sidebarColumn?.removeAttribute('data-dsh-desktop-sidebar-column');
+      detailsColumn?.removeAttribute('data-dsh-desktop-details-column');
       shellFrame = null;
       sidebarColumn = null;
       detailsColumn = null;
@@ -488,8 +532,9 @@ export const MACOS_TITLEBAR_SCRIPT = `
         nextSidebarColumn?.getBoundingClientRect().right ?? sidebar.rect.right,
       ),
     );
-    const sidebarCollapsed = sidebarTransition === null && (
-      measuredSidebarWidth < 100 || indicatesCollapsedSidebar(toggleLabel)
+    const sidebarCollapsed = sidebarTransition === 'closing' || (
+      sidebarTransition === null
+      && (measuredSidebarWidth < 100 || indicatesCollapsedSidebar(toggleLabel))
     );
     const flowColumns = nextFrame === null
       ? []
@@ -510,15 +555,21 @@ export const MACOS_TITLEBAR_SCRIPT = `
       sidebarColumn?.removeAttribute('data-dsh-desktop-sidebar-column');
       sidebarColumn = nextSidebarColumn;
     }
-    detailsColumn = nextDetailsColumn;
+    if (detailsColumn !== nextDetailsColumn) {
+      detailsColumn?.removeAttribute('data-dsh-desktop-details-column');
+      detailsColumn = nextDetailsColumn;
+    }
     sidebarColumn?.setAttribute('data-dsh-desktop-sidebar-column', '');
+    detailsColumn?.setAttribute('data-dsh-desktop-details-column', '');
     if (sidebarCollapsed) {
       shellFrame?.setAttribute('data-dsh-desktop-frame-collapsed', '');
     } else {
       shellFrame?.removeAttribute('data-dsh-desktop-frame-collapsed');
     }
 
-    const sidebarWidth = sidebarCollapsed ? 0 : measuredSidebarWidth;
+    const sidebarWidth = sidebarTransition !== null
+      ? measuredSidebarWidth
+      : sidebarCollapsed ? 0 : measuredSidebarWidth;
     compactBrand.hidden = true;
     document.documentElement.style.setProperty(
       '--dsh-desktop-titlebar-sidebar-width',
