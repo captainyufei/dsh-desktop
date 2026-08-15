@@ -161,21 +161,15 @@ pnpm dev
 可选择常用的平台参与讨论，交流使用问题、插件开发和项目进展。
 
 <table>
-  <thead>
-    <tr>
-      <th align="center">微信群</th>
-      <th align="center">QQ 群</th>
-    </tr>
-  </thead>
   <tbody>
     <tr>
+      <th align="center">微信群</th>
+    </tr>
+    <tr>
       <td align="center"><img src="./assets/readme/community-wechat.png" width="220" alt="DSH Desktop 微信群二维码"></td>
-      <td align="center">二维码待补充</td>
     </tr>
   </tbody>
 </table>
-
-Discord：[加入 DeepSeek Harness Desktop 社区](https://discord.gg/TJeGqKRNM)
 
 如果你希望加入我们的技术团队，也欢迎通过 [captainaigc@gmail.com](mailto:captainaigc@gmail.com) 联系我们。
 

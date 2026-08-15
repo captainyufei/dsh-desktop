@@ -163,21 +163,15 @@ The `0.1.x` line does not include automatic updates, cloud sync, mobile remote a
 Choose whichever platform is convenient to discuss usage, plugin development, and project progress.
 
 <table>
-  <thead>
-    <tr>
-      <th align="center">WeChat group</th>
-      <th align="center">QQ group</th>
-    </tr>
-  </thead>
   <tbody>
     <tr>
+      <th align="center">WeChat group</th>
+    </tr>
+    <tr>
       <td align="center"><img src="./assets/readme/community-wechat.png" width="220" alt="QR code for the DSH Desktop WeChat group"></td>
-      <td align="center">QR code coming soon</td>
     </tr>
   </tbody>
 </table>
-
-Discord: [Join the DeepSeek Harness Desktop community](https://discord.gg/TJeGqKRNM)
 
 If you would like to join the technical team, contact us at [captainaigc@gmail.com](mailto:captainaigc@gmail.com).
 
