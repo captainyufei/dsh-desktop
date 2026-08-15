@@ -6,6 +6,12 @@ DSH Desktop redistributes DeepSeek Harness from the pinned `@deepseek-ai/dsh@0.1
 
 Upstream repository: [deepseek-ai/deepseek-harness](https://github.com/deepseek-ai/deepseek-harness)
 
+The desktop application icon incorporates the DeepSeek logo artwork shipped
+with the pinned official Web UI package. DeepSeek names and logos may be
+trademarks of their respective owner. Their inclusion identifies compatibility
+with DeepSeek Harness and does not imply that this community-built desktop
+client is an official DeepSeek release or endorsement.
+
 DeepSeek Harness is provided under the following MIT license notice:
 
 ```text

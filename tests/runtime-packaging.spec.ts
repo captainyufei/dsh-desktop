@@ -208,7 +208,11 @@ describe('native package configuration', () => {
     })
   })
 
-  it('provides original production icons for macOS and Windows', () => {
+  it('provides production icons for macOS and Windows', () => {
+    const upstreamLogo = readFileSync('build/deepseek-logo.svg', 'utf8')
+    expect(upstreamLogo).toContain('viewBox="0 0 50 50"')
+    expect(upstreamLogo).toContain('<path')
+
     const png = readFileSync('build/icon.png')
     expect(png.subarray(1, 4).toString('ascii')).toBe('PNG')
     expect(png.readUInt32BE(16)).toBe(1024)
