@@ -147,3 +147,52 @@ jobs:
             build/generated/legal/THIRD_PARTY_NOTICES.md
             build/generated/legal/dependency-licenses.json
           if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs:
+      - quality
+      - mac-arm64
+      - mac-x64
+      - windows-x64
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: dsh-desktop-*
+          path: release-artifacts
+      - name: Prepare release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir release-upload
+          while IFS= read -r -d '' asset; do
+            cp "$asset" "release-upload/$(basename "$asset")"
+          done < <(find release-artifacts -type f \( -name '*.dmg' -o -name '*.exe' \) -print0)
+          test "$(find release-upload -maxdepth 1 -type f | wc -l | tr -d ' ')" = 3
+          (cd release-upload && sha256sum *.dmg *.exe > SHA256SUMS.txt)
+      - name: Create GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_NOTES: |
+            DSH Desktop v0.1.0 community release.
+
+            Downloads:
+            - macOS Apple Silicon (ARM64)
+            - macOS Intel (x64)
+            - Windows x64
+
+            This release fixes Windows folder selection and UNC paths, prevents installer hangs, keeps both sidebars usable, and unifies the application icon with the landing page.
+
+            These community builds are not code-signed or notarized. Windows SmartScreen or macOS Gatekeeper may require confirming the first launch.
+        run: |
+          set -euo pipefail
+          mapfile -d '' assets < <(find release-upload -maxdepth 1 -type f -print0)
+          gh release create "$GITHUB_REF_NAME" "${assets[@]}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --title "DSH Desktop v0.1.0" \
+            --notes "$RELEASE_NOTES"
