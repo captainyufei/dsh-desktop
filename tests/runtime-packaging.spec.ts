@@ -361,11 +361,11 @@ describe('native package configuration', () => {
       package:
         'pnpm build && pnpm stage:runtime && pnpm verify:runtime && pnpm stage:legal && electron-builder --dir && pnpm verify:package-legal',
       'dist:mac:arm64':
-        'node --import tsx scripts/verify-release-target.ts darwin arm64 && pnpm build && pnpm stage:runtime && pnpm verify:runtime && pnpm stage:legal && electron-builder --mac dmg --arm64 && pnpm verify:package-legal -- darwin arm64',
+        'node --import tsx scripts/verify-release-target.ts darwin arm64 && pnpm build && pnpm stage:runtime && pnpm verify:runtime && pnpm stage:legal && electron-builder --mac dmg --arm64 --publish never && pnpm verify:package-legal -- darwin arm64',
       'dist:mac:x64':
-        'node --import tsx scripts/verify-release-target.ts darwin x64 && pnpm build && pnpm stage:runtime && pnpm verify:runtime && pnpm stage:legal && electron-builder --mac dmg --x64 && pnpm verify:package-legal -- darwin x64',
+        'node --import tsx scripts/verify-release-target.ts darwin x64 && pnpm build && pnpm stage:runtime && pnpm verify:runtime && pnpm stage:legal && electron-builder --mac dmg --x64 --publish never && pnpm verify:package-legal -- darwin x64',
       'dist:win:x64':
-        'node --import tsx scripts/verify-release-target.ts win32 x64 && pnpm build && pnpm stage:runtime && pnpm verify:runtime && pnpm stage:legal && electron-builder --win nsis --x64 && pnpm verify:package-legal -- win32 x64',
+        'node --import tsx scripts/verify-release-target.ts win32 x64 && pnpm build && pnpm stage:runtime && pnpm verify:runtime && pnpm stage:legal && electron-builder --win nsis --x64 --publish never && pnpm verify:package-legal -- win32 x64',
     })
   })
 
