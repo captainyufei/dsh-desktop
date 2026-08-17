@@ -7,7 +7,7 @@ settings:
 
 patchedDependencies:
   dsh-better-sidebar@0.12.2:
-    hash: 4e18a5ff849f1dbeacd1542b514af52a3ce4f008079752e0168cd36b94fcabde
+    hash: 022873bec185e42998972e456f97e15c178cff7e0fd6413c3506377700be1aad
     path: patches/dsh-better-sidebar@0.12.2.patch
 
 importers:
@@ -19,7 +19,7 @@ importers:
         version: 0.1.0-rc.6(cddc836702cf47b37d5d75eedc3ebb90)
       dsh-better-sidebar:
         specifier: 0.12.2
-        version: 0.12.2(patch_hash=4e18a5ff849f1dbeacd1542b514af52a3ce4f008079752e0168cd36b94fcabde)(66c4f6104258982c16d3fa363a54f80a)
+        version: 0.12.2(patch_hash=022873bec185e42998972e456f97e15c178cff7e0fd6413c3506377700be1aad)(66c4f6104258982c16d3fa363a54f80a)
     devDependencies:
       '@types/node':
         specifier: 26.2.0
@@ -9955,7 +9955,7 @@ snapshots:
 
   dotenv@16.6.1: {}
 
-  dsh-better-sidebar@0.12.2(patch_hash=4e18a5ff849f1dbeacd1542b514af52a3ce4f008079752e0168cd36b94fcabde)(66c4f6104258982c16d3fa363a54f80a):
+  dsh-better-sidebar@0.12.2(patch_hash=022873bec185e42998972e456f97e15c178cff7e0fd6413c3506377700be1aad)(66c4f6104258982c16d3fa363a54f80a):
     dependencies:
       '@codemirror/commands': 6.10.4
       '@codemirror/lang-cpp': 6.0.3

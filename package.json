@@ -50,6 +50,7 @@
       { "from": "runtime-host/node_modules", "to": "host/node_modules" },
       { "from": "runtime-host/package.json", "to": "host/package.json" },
       { "from": "build/generated/legal", "to": "legal" },
+      { "from": "build/icon.png", "to": "desktop-resources/icon.png" },
       { "from": "build/trayTemplate.png", "to": "desktop-resources/trayTemplate.png" },
       { "from": "build/trayTemplate@2x.png", "to": "desktop-resources/trayTemplate@2x.png" }
     ],
@@ -64,7 +65,10 @@
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "differentialPackage": false,
+      "useZip": true,
+      "include": "build/installer.nsh"
     }
   }
 }

@@ -4,28 +4,13 @@ export const MACOS_SIDEBAR_TOGGLE_ELEMENT_ID = 'dsh-desktop-sidebar-toggle'
 export const MACOS_COMPACT_BRAND_ELEMENT_ID = 'dsh-desktop-compact-brand'
 
 export const DESKTOP_PANEL_TOGGLES_CSS = `
-[data-dsh-better-sidebar] > div:has(> button[aria-label*='底部面板']):has(> button:nth-of-type(2)),
-[data-dsh-better-sidebar] > div:has(> button[aria-label*='bottom panel' i]):has(> button:nth-of-type(2)) {
+[data-dsh-better-sidebar] div[class*='_toggleCluster'] {
   top: 8px !important;
   align-items: center !important;
 }
-`
 
-export const WINDOWS_PANEL_TOGGLES_CSS = `
-[data-dsh-better-sidebar] > div:has(> button[aria-label*='底部面板']):has(> button:nth-of-type(2)),
-[data-dsh-better-sidebar] > div:has(> button[aria-label*='bottom panel' i]):has(> button:nth-of-type(2)) {
-  top: 8px !important;
-  right: 12px !important;
-  z-index: 2147483646 !important;
-  height: 30px !important;
-  align-items: center !important;
-  -webkit-app-region: no-drag !important;
-}
-
-[data-dsh-better-sidebar] > div:has(> button[aria-label*='底部面板']):has(> button:nth-of-type(2)) > button,
-[data-dsh-better-sidebar] > div:has(> button[aria-label*='bottom panel' i]):has(> button:nth-of-type(2)) > button {
-  position: relative !important;
-  z-index: 2147483646 !important;
+[data-dsh-better-sidebar] button,
+[data-dsh-better-sidebar] [role='button'] {
   pointer-events: auto !important;
   -webkit-app-region: no-drag !important;
 }
@@ -402,9 +387,36 @@ export const MACOS_TITLEBAR_SCRIPT = `
         && rect.bottom > 0
         && rect.right > window.innerWidth - 96)
       .reduce((left, rect) => Math.min(left, rect.left), window.innerWidth);
+    // In fallback mode the transparent drag layer spans the top of the
+    // window. Stop it at the open better-sidebar panel so its tab strip
+    // (tab activation, close and new-tab controls) receives pointer events.
+    const betterSidebarPanelLeft = Array.from(
+      document.querySelectorAll('[data-dsh-better-sidebar] > div'),
+    )
+      .map((element) => ({
+        rect: element.getBoundingClientRect(),
+        style: getComputedStyle(element),
+      }))
+      .filter(({ rect, style }) =>
+        style.position === 'fixed'
+        && style.visibility !== 'hidden'
+        && style.pointerEvents !== 'none'
+        && rect.width > 0
+        && rect.height > titlebarHeight
+        && rect.left >= 0
+        && rect.left < window.innerWidth
+        && rect.top <= 0
+        && rect.bottom > titlebarHeight
+        && rect.right >= window.innerWidth - 1)
+      .reduce((left, { rect }) => Math.min(left, rect.left), window.innerWidth);
     titlebar.style.setProperty(
       '--dsh-desktop-fallback-drag-width',
-      Math.max(0, Math.min(window.innerWidth, rootRight, rightChromeControlLeft)) + 'px',
+      Math.max(0, Math.min(
+        window.innerWidth,
+        rootRight,
+        rightChromeControlLeft,
+        betterSidebarPanelLeft,
+      )) + 'px',
     );
     // The better-sidebar plugin adds a second sidebar control on the right.
     // Always bind the native titlebar button to the left-most (conversation)
@@ -722,7 +734,7 @@ export function windowAppearanceForPlatform(
     }
   }
   if (platform === 'win32') {
-    return { autoHideMenuBar: false }
+    return { autoHideMenuBar: true }
   }
   return { autoHideMenuBar: true }
 }
@@ -736,10 +748,7 @@ export async function applyWindowAppearance(
   })
 
   if (platform === 'win32') {
-    await Promise.all([
-      panelTogglesReady,
-      webContents.insertCSS(WINDOWS_PANEL_TOGGLES_CSS, { cssOrigin: 'user' }),
-    ])
+    await panelTogglesReady
     return
   }
 

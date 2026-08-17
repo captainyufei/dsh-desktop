@@ -11,7 +11,6 @@ import {
   Tray,
 } from 'electron'
 import { APP_ID, APP_NAME } from './app-metadata.ts'
-import { applicationMenuTemplate } from './application-menu.ts'
 import { runCleanupStages } from './cleanup.ts'
 import { createDiagnostics } from './diagnostics.ts'
 import { assertRuntimeArtifacts, resolveHostPaths, type HostPaths } from './host/paths.ts'
@@ -58,6 +57,23 @@ function startApplication(): void {
   let hostExited = true
   let releaseQuit = false
   let runtimePaths: HostPaths | undefined
+  let applicationIcon: ReturnType<typeof nativeImage.createFromPath> | undefined
+
+  const desktopResourcePath = (name: string): string => app.isPackaged
+    ? join(process.resourcesPath, 'desktop-resources', name)
+    : join(app.getAppPath(), 'build', name)
+
+  const loadApplicationIcon = (): ReturnType<typeof nativeImage.createFromPath> => {
+    const iconPath = desktopResourcePath('icon.png')
+    if (!existsSync(iconPath)) {
+      throw new Error(`Application icon is missing: ${iconPath}`)
+    }
+    const image = nativeImage.createFromPath(iconPath)
+    if (image.isEmpty()) {
+      throw new Error(`Application icon could not be loaded: ${iconPath}`)
+    }
+    return image
+  }
 
   const logHostChunk = (streamName: 'stdout' | 'stderr', chunk: string): void => {
     const bounded = chunk.length > MAX_HOST_LOG_CHARS
@@ -152,10 +168,12 @@ function startApplication(): void {
     shell.showItemInFolder(diagnostics.path)
   }
 
-  const installApplicationMenu = (): void => {
-    const template = applicationMenuTemplate(process.platform, { openLogs })
-    if (template.length > 0) {
-      Menu.setApplicationMenu(Menu.buildFromTemplate(template))
+  const configureApplicationMenu = (): void => {
+    // Windows uses the standard window frame and the web application's own
+    // controls. Removing the Electron menu prevents a hidden menu bar from
+    // reappearing when Alt is pressed.
+    if (process.platform === 'win32') {
+      Menu.setApplicationMenu(null)
     }
   }
 
@@ -274,6 +292,7 @@ function startApplication(): void {
       minHeight: 640,
       show: false,
       frame: true,
+      icon: applicationIcon,
       ...windowAppearanceForPlatform(process.platform),
       webPreferences: {
         contextIsolation: true,
@@ -286,22 +305,8 @@ function startApplication(): void {
     mainWindowReady = false
 
     if (process.platform === 'win32') {
-      // Keep Windows chrome native. Explicitly showing the menu avoids an
-      // Electron/Windows race where a restored window can retain the hidden
-      // menu-bar state from a previous launch even with autoHideMenuBar=false.
-      const restoreMenuBar = (): void => {
-        if (window.isDestroyed()) {
-          return
-        }
-        window.setAutoHideMenuBar(false)
-        window.setMenuBarVisibility(true)
-      }
-      restoreMenuBar()
-      // Restoring a hidden BrowserWindow can re-apply Windows' persisted
-      // menu-bar state after construction. Reassert the native chrome at the
-      // two points where the window becomes presentable/visible.
-      window.on('ready-to-show', restoreMenuBar)
-      window.on('show', restoreMenuBar)
+      window.setAutoHideMenuBar(true)
+      window.setMenuBarVisibility(false)
     }
 
     window.on('close', (event) => lifecycle.onWindowClose(event))
@@ -495,9 +500,7 @@ function startApplication(): void {
   }
 
   const createTray = (): void => {
-    const trayPath = app.isPackaged
-      ? join(process.resourcesPath, 'desktop-resources', 'trayTemplate.png')
-      : join(app.getAppPath(), 'build', 'trayTemplate.png')
+    const trayPath = desktopResourcePath('trayTemplate.png')
     if (!existsSync(trayPath)) {
       throw new Error(`Tray asset is missing: ${trayPath}`)
     }
@@ -569,7 +572,11 @@ function startApplication(): void {
       })
       assertRuntimeArtifacts(runtimePaths)
       prepareDesktopProfile(runtimePaths)
-      installApplicationMenu()
+      applicationIcon = loadApplicationIcon()
+      if (process.platform === 'darwin') {
+        app.dock?.setIcon(applicationIcon)
+      }
+      configureApplicationMenu()
       createTray()
     } catch (error) {
       await showMissingArtifacts(error)

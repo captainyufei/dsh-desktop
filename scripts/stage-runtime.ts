@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process'
 import { rmSync } from 'node:fs'
 import { dirname, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { patchWindowsDirectoryPicker } from './patch-windows-directory-picker.ts'
 import { verifyRuntime } from './verify-runtime.ts'
 
 export interface RuntimeDeployCommand {
@@ -82,6 +83,11 @@ export function stageRuntime(repositoryRoot: string): void {
   }
   if (deployResult.status !== 0) {
     throw new Error(`Harness runtime deployment failed with exit code ${deployResult.status ?? 'unknown'}`)
+  }
+
+  const patchedDirectoryPicker = patchWindowsDirectoryPicker(runtimeHost)
+  if (patchedDirectoryPicker !== null) {
+    console.log(`Patched Windows directory picker: ${patchedDirectoryPicker}`)
   }
 
   const entries = verifyRuntime(runtimeHost)

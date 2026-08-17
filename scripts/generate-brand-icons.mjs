@@ -13,14 +13,26 @@ import { fileURLToPath } from 'node:url'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const buildDirectory = join(root, 'build')
-const source = join(buildDirectory, 'favicon-spectrum-v3.svg')
 const temporaryDirectory = mkdtempSync(join(tmpdir(), 'dsh-brand-icons-'))
+// This is the canonical DSH Desktop application mark. The landing page uses
+// the same SVG byte-for-byte; every platform asset is rendered from it.
+const source = join(buildDirectory, 'favicon-spectrum-v3.svg')
 const renderedPng = join(temporaryDirectory, `${basename(source)}.png`)
+const maskedPng = join(temporaryDirectory, 'dsh-app-icon-masked.png')
+const maskSource = join(root, 'scripts', 'mask-rounded-icon.swift')
+const maskBinary = join(temporaryDirectory, 'mask-rounded-icon')
+
+function maskRoundedPng(input, output) {
+  execFileSync(maskBinary, [input, output], { stdio: 'inherit' })
+}
 
 function resizePng(input, output, size) {
-  execFileSync('sips', ['-z', String(size), String(size), input, '--out', output], {
+  const resizedPng = `${output}.unmasked.png`
+  execFileSync('sips', ['-z', String(size), String(size), input, '--out', resizedPng], {
     stdio: 'ignore',
   })
+  maskRoundedPng(resizedPng, output)
+  rmSync(resizedPng, { force: true })
 }
 
 function createIco(entries, output) {
@@ -50,10 +62,12 @@ function createIco(entries, output) {
 }
 
 try {
+  execFileSync('swiftc', [maskSource, '-O', '-o', maskBinary], { stdio: 'inherit' })
   execFileSync('qlmanage', ['-t', '-s', '1024', '-o', temporaryDirectory, source], {
     stdio: 'ignore',
   })
-  copyFileSync(renderedPng, join(buildDirectory, 'icon.png'))
+  maskRoundedPng(renderedPng, maskedPng)
+  copyFileSync(maskedPng, join(buildDirectory, 'icon.png'))
 
   const iconsetDirectory = join(temporaryDirectory, 'dsh-desktop.iconset')
   mkdirSync(iconsetDirectory)
@@ -70,7 +84,7 @@ try {
     ['icon_512x512@2x.png', 1024],
   ]
   for (const [name, size] of iconset) {
-    resizePng(renderedPng, join(iconsetDirectory, name), size)
+    resizePng(maskedPng, join(iconsetDirectory, name), size)
   }
   execFileSync('iconutil', [
     '-c',
@@ -84,7 +98,7 @@ try {
   mkdirSync(icoDirectory)
   const icoEntries = [16, 24, 32, 48, 64, 128, 256].map((size) => {
     const path = join(icoDirectory, `icon-${size}.png`)
-    resizePng(renderedPng, path, size)
+    resizePng(maskedPng, path, size)
     return { path, size }
   })
   createIco(icoEntries, join(buildDirectory, 'icon.ico'))

@@ -8,7 +8,6 @@ import {
   MACOS_TITLEBAR_CSS,
   MACOS_TITLEBAR_ELEMENT_ID,
   MACOS_TITLEBAR_SCRIPT,
-  WINDOWS_PANEL_TOGGLES_CSS,
   windowAppearanceForPlatform,
   type WindowAppearanceWebContents,
 } from '../src/window-appearance.ts'
@@ -29,7 +28,9 @@ describe('desktop window appearance', () => {
       titleBarStyle: 'hiddenInset',
       trafficLightPosition: { x: 16, y: 15 },
     })
-    expect(windowAppearanceForPlatform('win32')).toEqual({ autoHideMenuBar: false })
+    expect(windowAppearanceForPlatform('win32')).toEqual({
+      autoHideMenuBar: true,
+    })
     expect(windowAppearanceForPlatform('linux')).toEqual({ autoHideMenuBar: true })
     expect(MACOS_TITLEBAR_HEIGHT).toBe(44)
   })
@@ -70,8 +71,12 @@ describe('desktop window appearance', () => {
     expect(MACOS_TITLEBAR_CSS).toContain('padding-right: 86px !important')
     expect(MACOS_TITLEBAR_CSS).toContain('width: 36px')
     expect(MACOS_TITLEBAR_CSS).toContain('height: 36px')
-    expect(DESKTOP_PANEL_TOGGLES_CSS).toContain("button[aria-label*='底部面板']")
-    expect(DESKTOP_PANEL_TOGGLES_CSS).toContain(':has(> button:nth-of-type(2))')
+    expect(DESKTOP_PANEL_TOGGLES_CSS).toContain(
+      "[data-dsh-better-sidebar] div[class*='_toggleCluster']",
+    )
+    expect(DESKTOP_PANEL_TOGGLES_CSS).toContain('[data-dsh-better-sidebar] button')
+    expect(DESKTOP_PANEL_TOGGLES_CSS).toContain('-webkit-app-region: no-drag !important')
+    expect(DESKTOP_PANEL_TOGGLES_CSS).not.toContain('[data-dsh-better-sidebar] >')
     expect(DESKTOP_PANEL_TOGGLES_CSS).toContain('top: 8px !important')
     expect(MACOS_TITLEBAR_SCRIPT).toContain(MACOS_TITLEBAR_ELEMENT_ID)
     expect(MACOS_TITLEBAR_SCRIPT).toContain('document.getElementById(id)')
@@ -92,7 +97,10 @@ describe('desktop window appearance', () => {
     expect(MACOS_TITLEBAR_SCRIPT).toContain('root?.getBoundingClientRect().right')
     expect(MACOS_TITLEBAR_SCRIPT).toContain('const rightChromeControlLeft = Array.from(document.querySelectorAll')
     expect(MACOS_TITLEBAR_SCRIPT).toContain('rect.right > window.innerWidth - 96')
-    expect(MACOS_TITLEBAR_SCRIPT).toContain('rootRight, rightChromeControlLeft')
+    expect(MACOS_TITLEBAR_SCRIPT).toContain('const betterSidebarPanelLeft = Array.from')
+    expect(MACOS_TITLEBAR_SCRIPT).toContain("document.querySelectorAll('[data-dsh-better-sidebar] > div')")
+    expect(MACOS_TITLEBAR_SCRIPT).toContain("style.position === 'fixed'")
+    expect(MACOS_TITLEBAR_SCRIPT).toContain('betterSidebarPanelLeft,')
     expect(MACOS_TITLEBAR_SCRIPT).toContain('left.getBoundingClientRect().left - right.getBoundingClientRect().left')
     expect(MACOS_TITLEBAR_SCRIPT).toContain('const getSidebarStructure = () =>')
     expect(MACOS_TITLEBAR_SCRIPT).toContain('const toggleStructure = getSidebarStructure()')
@@ -113,25 +121,16 @@ describe('desktop window appearance', () => {
     expect(MACOS_TITLEBAR_SCRIPT).toContain("removeAttribute('data-dsh-desktop-sidebar-transition')")
   })
 
-  it('keeps the native Windows frame and installs only panel controls', async () => {
+  it('keeps the standard Windows frame without injecting desktop titlebar controls', async () => {
     const webContents = makeWebContents()
 
     await applyWindowAppearance('win32', webContents)
 
-    expect(webContents.insertCSS).toHaveBeenCalledTimes(2)
+    expect(webContents.insertCSS).toHaveBeenCalledOnce()
     expect(webContents.insertCSS).toHaveBeenCalledWith(DESKTOP_PANEL_TOGGLES_CSS, {
       cssOrigin: 'user',
     })
-    expect(webContents.insertCSS).toHaveBeenCalledWith(WINDOWS_PANEL_TOGGLES_CSS, {
-      cssOrigin: 'user',
-    })
     expect(webContents.executeJavaScript).not.toHaveBeenCalled()
-    expect(WINDOWS_PANEL_TOGGLES_CSS).toContain(':has(> button:nth-of-type(2))')
-    expect(WINDOWS_PANEL_TOGGLES_CSS).toContain('right: 12px')
-    expect(WINDOWS_PANEL_TOGGLES_CSS).toContain('top: 8px')
-    expect(WINDOWS_PANEL_TOGGLES_CSS).toContain('z-index: 2147483646 !important')
-    expect(WINDOWS_PANEL_TOGGLES_CSS).toContain('pointer-events: auto !important')
-    expect(WINDOWS_PANEL_TOGGLES_CSS).toContain('-webkit-app-region: no-drag !important')
   })
 
   it('keeps the standard shell treatment on Linux', async () => {

@@ -271,6 +271,32 @@ describe('native package configuration', () => {
     expect(bundledClient).toContain('if (narrow || current === void 0) return;')
   })
 
+  it('keeps Windows UNC workspace support in the installed Better Sidebar bundle', () => {
+    const patch = readFileSync('patches/dsh-better-sidebar@0.12.2.patch', 'utf8')
+    const bundledHost = readFileSync('node_modules/dsh-better-sidebar/lib/index.js', 'utf8')
+    const bundledClient = readFileSync('node_modules/dsh-better-sidebar/lib/client.js', 'utf8')
+
+    expect(patch).toContain('const pathApi = platform === \'win32\' ? win32 : posix')
+    expect(bundledHost).toContain('const pathApi = platform === "win32" ? win32 : posix;')
+    expect(bundledHost).toContain('if (!pathApi.isAbsolute(path))')
+    expect(bundledHost).toContain('return pathApi.resolve(path);')
+    expect(patch).toContain(String.raw`path.startsWith("\\\\")`)
+    expect(bundledClient).toContain(String.raw`path.startsWith("\\\\")`)
+  })
+
+  it('pushes only the conversation column when the Better Sidebar opens', () => {
+    const sourceCss = readFileSync('node_modules/dsh-better-sidebar/src/client/layout.css', 'utf8')
+    const patch = readFileSync('patches/dsh-better-sidebar@0.12.2.patch', 'utf8')
+    const bundledClient = readFileSync('node_modules/dsh-better-sidebar/lib/client.js', 'utf8')
+
+    expect(sourceCss).not.toMatch(/#root\s*\{[\s\S]*?margin-right:\s*var\(--dsh-sidebar-width/u)
+    expect(sourceCss).toMatch(/div:nth-child\(2\)\s*\{[\s\S]*?margin-right:\s*var\(--dsh-sidebar-width/u)
+    expect(bundledClient).toContain('const desktopSafeLayoutCss =')
+    expect(bundledClient).toContain('tag.textContent = css + desktopSafeLayoutCss')
+    expect(patch).toContain('desktopSafeLayoutCss')
+    expect(patch).toContain('margin-right: var(--dsh-sidebar-width, 0px)')
+  })
+
   it('copies the verified runtime and desktop resources outside ASAR', () => {
     const manifest = JSON.parse(readFileSync('package.json', 'utf8')) as {
       build?: Record<string, unknown>
@@ -290,6 +316,10 @@ describe('native package configuration', () => {
         { from: 'runtime-host/package.json', to: 'host/package.json' },
         { from: 'build/generated/legal', to: 'legal' },
         {
+          from: 'build/icon.png',
+          to: 'desktop-resources/icon.png',
+        },
+        {
           from: 'build/trayTemplate.png',
           to: 'desktop-resources/trayTemplate.png',
         },
@@ -307,8 +337,24 @@ describe('native package configuration', () => {
       nsis: {
         oneClick: false,
         allowToChangeInstallationDirectory: true,
+        differentialPackage: false,
+        useZip: true,
+        include: 'build/installer.nsh',
       },
     })
+
+    const windowsInstallerInclude = readFileSync('build/installer.nsh', 'utf8')
+    expect(windowsInstallerInclude).toContain('!macro customCheckAppRunning')
+    expect(windowsInstallerInclude).toContain('${nsProcess::FindProcess}')
+    expect(windowsInstallerInclude).toContain('${nsProcess::CloseProcess}')
+    expect(windowsInstallerInclude).toContain('${nsProcess::KillProcess}')
+    expect(windowsInstallerInclude).toContain('DshNativeProcessCheck')
+    expect(windowsInstallerInclude).toContain('RMDir /r "$INSTDIR"')
+    expect(windowsInstallerInclude).toContain('DeleteRegKey SHELL_CONTEXT')
+    expect(windowsInstallerInclude).toContain('!macro customInstall')
+    expect(windowsInstallerInclude).not.toContain('PowerShell')
+    expect(windowsInstallerInclude).not.toContain('Get-CimInstance')
+
     expect(manifest.scripts).toMatchObject({
       'stage:legal': 'node --import tsx scripts/stage-legal-resources.ts',
       'verify:package-legal': 'node --import tsx scripts/verify-packaged-legal-resources.ts',
@@ -327,6 +373,11 @@ describe('native package configuration', () => {
     const upstreamLogo = readFileSync('build/deepseek-logo.svg', 'utf8')
     expect(upstreamLogo).toContain('viewBox="0 0 50 50"')
     expect(upstreamLogo).toContain('<path')
+
+    const applicationMark = readFileSync('build/favicon-spectrum-v3.svg', 'utf8')
+    expect(applicationMark).toContain('id="favicon-shape"')
+    expect(applicationMark).toContain('clip-path="url(#favicon-shape)"')
+    expect(applicationMark).not.toContain('#15172F')
 
     const png = readFileSync('build/icon.png')
     expect(png.subarray(1, 4).toString('ascii')).toBe('PNG')
@@ -351,15 +402,29 @@ describe('native package configuration', () => {
     expect(retinaTray.readUInt32BE(20)).toBe(36)
   })
 
-  it('can regenerate every packaged application icon from the shared multicolor source', () => {
+  it('regenerates every platform icon from the landing-page application mark', () => {
     const manifest = JSON.parse(readFileSync('package.json', 'utf8')) as {
       scripts?: Record<string, string>
     }
     expect(manifest.scripts?.icons).toBe('node scripts/generate-brand-icons.mjs')
     const iconGenerator = readFileSync('scripts/generate-brand-icons.mjs', 'utf8')
     expect(iconGenerator).toContain("favicon-spectrum-v3.svg")
+    expect(iconGenerator).not.toContain("deepseek-logo.svg")
+    expect(iconGenerator).not.toContain('linearGradient id="app-spectrum"')
+    expect(iconGenerator).toContain("mask-rounded-icon.swift")
+    expect(iconGenerator).toContain('maskRoundedPng(renderedPng, maskedPng)')
     expect(iconGenerator).toContain("join(buildDirectory, 'icon.png')")
     expect(iconGenerator).toContain("join(buildDirectory, 'icon.icns')")
     expect(iconGenerator).toContain("join(buildDirectory, 'icon.ico')")
+
+    const iconMask = readFileSync('scripts/mask-rounded-icon.swift', 'utf8')
+    expect(iconMask).toContain('CGPath(roundedRect:')
+    expect(iconMask).toContain('shortEdge * 15 / 64')
+    expect(iconMask).toContain('buffer[offset] != 0')
+
+    const mainSource = readFileSync('src/main.ts', 'utf8')
+    expect(mainSource).toContain("desktopResourcePath('icon.png')")
+    expect(mainSource).toContain('icon: applicationIcon')
+    expect(mainSource).toContain('app.dock?.setIcon(applicationIcon)')
   })
 })
